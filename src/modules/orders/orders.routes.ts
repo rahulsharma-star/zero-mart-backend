@@ -12,6 +12,7 @@ const createSchema = z.object({
   address_id: z.string().uuid(),
   payment_method: z.enum(['upi', 'card', 'cod']),
   notes: z.string().trim().max(500).optional(),
+  is_urgent: z.boolean().optional(),
 });
 
 router.post(

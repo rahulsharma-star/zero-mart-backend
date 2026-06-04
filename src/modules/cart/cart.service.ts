@@ -14,7 +14,7 @@ export async function resolveUserRegion(userId: string): Promise<string | null> 
   return any?.region_id ?? null;
 }
 
-export async function getCart(userId: string, lang: Lang) {
+export async function getCart(userId: string, lang: Lang, urgent = false) {
   const rows = await db('cart_items as ci')
     .join('products as p', 'p.id', 'ci.product_id')
     .where('ci.user_id', userId)
@@ -31,9 +31,21 @@ export async function getCart(userId: string, lang: Lang) {
   const regionId = await resolveUserRegion(userId);
   const totals = await computeRegionTotals(
     items.map((i) => ({ price: i.product.price, quantity: i.quantity })),
-    regionId
+    regionId,
+    0,
+    urgent
   );
-  return { items, totals };
+  // also surface the urgent rate even when urgent isn't selected, so the
+  // checkout screen can label the toggle ("+₹30") before it's turned on.
+  const urgentTotals = urgent
+    ? totals
+    : await computeRegionTotals(
+        items.map((i) => ({ price: i.product.price, quantity: i.quantity })),
+        regionId,
+        0,
+        true
+      );
+  return { items, totals, urgent_fee_rate: urgentTotals.urgent_fee };
 }
 
 export async function addItem(userId: string, productId: string, quantity: number, lang: Lang) {

@@ -340,7 +340,7 @@ export async function getRegionPricing(regionId: string) {
 }
 export async function updateRegionPricing(regionId: string, input: any) {
   const patch: Record<string, unknown> = { updated_at: db.fn.now() };
-  for (const k of ['base_delivery_fee', 'min_order_value', 'free_delivery_above', 'surge_multiplier', 'surge_active', 'promo_discount']) {
+  for (const k of ['base_delivery_fee', 'min_order_value', 'free_delivery_above', 'surge_multiplier', 'surge_active', 'promo_discount', 'urgent_fee']) {
     if (input[k] !== undefined) patch[k] = input[k];
   }
   const existing = await db('region_pricing').where({ region_id: regionId, is_active: true }).first();
@@ -377,6 +377,8 @@ export async function createBanner(input: any) {
       image_url: input.image_url,
       action_type: input.action_type ?? 'none',
       action_value: input.action_value ?? null,
+      screen: input.screen ?? 'home',
+      position: input.position ?? 'top',
       sort_order: input.sort_order ?? 0,
       is_active: input.is_active ?? true,
     })
@@ -389,6 +391,8 @@ export async function updateBanner(id: string, input: any) {
   if (input.image_url !== undefined) patch.image_url = input.image_url;
   if (input.action_type !== undefined) patch.action_type = input.action_type;
   if (input.action_value !== undefined) patch.action_value = input.action_value;
+  if (input.screen !== undefined) patch.screen = input.screen;
+  if (input.position !== undefined) patch.position = input.position;
   if (input.sort_order !== undefined) patch.sort_order = input.sort_order;
   if (input.is_active !== undefined) patch.is_active = input.is_active;
   const [row] = await db('banners').where({ id }).update(patch).returning('*');

@@ -9,6 +9,7 @@ import paymentRoutes from './modules/payments/payments.routes';
 import adminRoutes from './modules/admin/admin.routes';
 import deliveryRoutes from './modules/delivery/delivery.routes';
 import notificationRoutes from './modules/notifications/notifications.routes';
+import uploadRoutes from './modules/uploads/uploads.routes';
 
 const router = Router();
 
@@ -24,5 +25,6 @@ router.use('/payments', paymentRoutes);
 router.use('/admin', adminRoutes);
 router.use('/delivery', deliveryRoutes);
 router.use('/notifications', notificationRoutes);
+router.use('/uploads', uploadRoutes);
 
 export default router;

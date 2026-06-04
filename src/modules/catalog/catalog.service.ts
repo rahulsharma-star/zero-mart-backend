@@ -77,13 +77,17 @@ export async function getProduct(lang: Lang, idOrSlug: string) {
   return serializeProduct(row, lang);
 }
 
-export async function getBanners(lang: Lang) {
-  const rows = await db('banners').where({ is_active: true }).orderBy('sort_order', 'asc');
+export async function getBanners(lang: Lang, screen?: string) {
+  const q = db('banners').where({ is_active: true });
+  if (screen) q.andWhere({ screen });
+  const rows = await q.orderBy('sort_order', 'asc');
   return rows.map((r) => ({
     id: r.id,
     title: localizeField(r.title, lang),
     image_url: r.image_url,
     action_type: r.action_type,
     action_value: r.action_value,
+    screen: r.screen,
+    position: r.position,
   }));
 }

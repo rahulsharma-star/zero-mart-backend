@@ -20,7 +20,9 @@ const setSchema = z.object({
 
 router.get(
   '/',
-  asyncHandler(async (req, res) => ok(res, await svc.getCart(req.user!.sub, req.lang)))
+  asyncHandler(async (req, res) =>
+    ok(res, await svc.getCart(req.user!.sub, req.lang, req.query.urgent === '1' || req.query.urgent === 'true'))
+  )
 );
 
 router.post(

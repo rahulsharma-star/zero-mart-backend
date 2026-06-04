@@ -21,8 +21,10 @@ function serializeOrder(order: any, items: any[], lang: Lang) {
     payment_status: order.payment_status,
     payment_method: order.payment_method,
     region_id: order.region_id,
+    is_urgent: order.is_urgent,
     subtotal: Number(order.subtotal),
     delivery_fee: Number(order.delivery_fee),
+    urgent_fee: Number(order.urgent_fee ?? 0),
     discount: Number(order.discount),
     total: Number(order.total),
     currency: order.currency,
@@ -53,7 +55,7 @@ function serializeOrder(order: any, items: any[], lang: Lang) {
 
 export async function createOrder(
   userId: string,
-  input: { address_id: string; payment_method: PaymentMethod; notes?: string },
+  input: { address_id: string; payment_method: PaymentMethod; notes?: string; is_urgent?: boolean },
   lang: Lang
 ) {
   const address = await db('addresses').where({ id: input.address_id, user_id: userId }).first();
@@ -78,9 +80,12 @@ export async function createOrder(
     if (r.stock < r.quantity) throw new ApiError(409, 'product.out_of_stock');
   }
 
+  const isUrgent = !!input.is_urgent;
   const totals = await computeTotals(
     cartRows.map((r) => ({ price: Number(r.price), quantity: r.quantity })),
-    regionId
+    regionId,
+    0,
+    isUrgent
   );
   if (totals.subtotal < totals.min_order_value) {
     throw new ApiError(400, 'order.min_order', { min_order_value: totals.min_order_value });
@@ -104,6 +109,8 @@ export async function createOrder(
         contact_phone: address.contact_phone,
         subtotal: totals.subtotal,
         delivery_fee: totals.delivery_fee,
+        urgent_fee: totals.urgent_fee,
+        is_urgent: isUrgent,
         discount: totals.discount,
         total: totals.total,
         currency: totals.currency,

@@ -6,6 +6,7 @@ import { env } from './config/env';
 import { locale } from './middleware/locale';
 import { errorHandler, notFoundHandler } from './middleware/error';
 import router from './routes';
+import { UPLOAD_DIR } from './modules/uploads/uploads.routes';
 
 export function createApp() {
   const app = express();
@@ -24,6 +25,14 @@ export function createApp() {
   app.use(locale);
 
   app.use(env.apiPrefix, router);
+
+  // Serve uploaded images. CORP override so the admin (different origin) can <img> them.
+  app.use(
+    '/uploads',
+    express.static(UPLOAD_DIR, {
+      setHeaders: (res) => res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin'),
+    })
+  );
 
   app.use(notFoundHandler);
   app.use(errorHandler);

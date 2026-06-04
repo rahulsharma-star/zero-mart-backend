@@ -2,4 +2,4 @@ node_modules/
 .env
 Uploads/
 private/
-.DS_Store
+.DS_Storeuploads/

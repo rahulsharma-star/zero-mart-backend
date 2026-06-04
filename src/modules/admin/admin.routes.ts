@@ -10,6 +10,11 @@ const router = Router();
 router.use(authRequired, requireRole('admin'));
 
 const ml = z.object({ en: z.string().min(1), hi: z.string().optional() });
+// Accepts an absolute URL or an uploaded relative path ("/uploads/..").
+const imageRef = z.string().refine(
+  (v) => /^https?:\/\//.test(v) || v.startsWith('/uploads/'),
+  { message: 'must be an image URL or an uploaded path' }
+);
 const pageQuery = (req: any) => ({
   page: Math.max(1, parseInt(String(req.query.page ?? '1'), 10) || 1),
   limit: Math.min(100, Math.max(1, parseInt(String(req.query.limit ?? '20'), 10) || 20)),
@@ -23,7 +28,7 @@ router.get('/dashboard', asyncHandler(async (_req, res) => ok(res, await svc.das
 // ── Categories ───────────────────────────────────────────
 const categorySchema = z.object({
   name: ml,
-  image_url: z.string().url().optional(),
+  image_url: imageRef.optional(),
   sort_order: z.number().int().optional(),
   is_active: z.boolean().optional(),
 });
@@ -41,8 +46,8 @@ const productSchema = z.object({
   price: z.number().nonnegative(),
   mrp: z.number().nonnegative().optional(),
   stock: z.number().int().min(0).optional(),
-  image_url: z.string().url().optional(),
-  images: z.array(z.string().url()).optional(),
+  image_url: imageRef.optional(),
+  images: z.array(imageRef).optional(),
   is_active: z.boolean().optional(),
   sort_order: z.number().int().optional(),
 });
@@ -74,9 +79,11 @@ router.get('/users', asyncHandler(async (req, res) => ok(res, await svc.listUser
 // ── Banners ──────────────────────────────────────────────
 const bannerSchema = z.object({
   title: ml.partial().optional(),
-  image_url: z.string().url(),
+  image_url: imageRef,
   action_type: z.enum(['category', 'product', 'url', 'none']).optional(),
   action_value: z.string().optional(),
+  screen: z.enum(['home', 'category', 'cart', 'checkout', 'orders', 'profile']).optional(),
+  position: z.enum(['top', 'middle', 'bottom', 'footer']).optional(),
   sort_order: z.number().int().optional(),
   is_active: z.boolean().optional(),
 });
@@ -124,6 +131,7 @@ const pricingSchema = z.object({
   base_delivery_fee: z.number().min(0).optional(), min_order_value: z.number().min(0).optional(),
   free_delivery_above: z.number().min(0).nullable().optional(), surge_multiplier: z.number().min(1).optional(),
   surge_active: z.boolean().optional(), promo_discount: z.number().min(0).optional(),
+  urgent_fee: z.number().min(0).nullable().optional(),
 });
 router.put('/regions/:id/pricing', validate({ body: pricingSchema }), asyncHandler(async (req, res) => ok(res, await svc.updateRegionPricing(req.params.id, req.body))));
 

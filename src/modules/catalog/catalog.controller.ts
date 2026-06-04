@@ -24,14 +24,14 @@ export async function product(req: Request, res: Response) {
 }
 
 export async function banners(req: Request, res: Response) {
-  return ok(res, await svc.getBanners(req.lang));
+  return ok(res, await svc.getBanners(req.lang, req.query.screen as string | undefined));
 }
 
 /** Home bootstrap: store info + banners + categories in one call. */
 export async function home(req: Request, res: Response) {
   const [settings, bannerList, categoryList] = await Promise.all([
     getAllSettings(),
-    svc.getBanners(req.lang),
+    svc.getBanners(req.lang, 'home'),
     svc.listCategories(req.lang),
   ]);
   return ok(res, { settings, banners: bannerList, categories: categoryList });

@@ -4,6 +4,7 @@ import { getSetting } from '../../services/settings.service';
 export interface Totals {
   subtotal: number;
   delivery_fee: number;
+  urgent_fee: number;
   discount: number;
   total: number;
   free_delivery_above: number | null;
@@ -18,6 +19,7 @@ interface PricingConfig {
   surge_multiplier: number;
   surge_active: boolean;
   promo_discount: number;
+  urgent_fee: number;
   currency: string;
 }
 
@@ -36,6 +38,10 @@ export async function getPricingConfig(regionId?: string | null): Promise<Pricin
         surge_multiplier: Number(row.surge_multiplier),
         surge_active: row.surge_active,
         promo_discount: Number(row.promo_discount),
+        urgent_fee:
+          row.urgent_fee != null
+            ? Number(row.urgent_fee)
+            : await getSetting<number>('urgent_fee', 30),
         currency: region?.currency ?? 'INR',
       };
     }
@@ -48,6 +54,7 @@ export async function getPricingConfig(regionId?: string | null): Promise<Pricin
     surge_multiplier: 1,
     surge_active: false,
     promo_discount: 0,
+    urgent_fee: await getSetting<number>('urgent_fee', 30),
     currency: await getSetting<string>('currency', 'INR'),
   };
 }
@@ -56,7 +63,8 @@ export async function getPricingConfig(regionId?: string | null): Promise<Pricin
 export async function computeTotals(
   lines: Array<{ price: number; quantity: number }>,
   regionId?: string | null,
-  discount = 0
+  discount = 0,
+  urgent = false
 ): Promise<Totals> {
   const cfg = await getPricingConfig(regionId);
   const subtotal = lines.reduce((s, l) => s + l.price * l.quantity, 0);
@@ -66,10 +74,13 @@ export async function computeTotals(
   if (fee > 0 && cfg.surge_active) fee = round2(fee * cfg.surge_multiplier);
   if (fee > 0) fee = Math.max(0, fee - cfg.promo_discount);
 
-  const total = round2(subtotal + fee - discount);
+  const urgentFee = urgent && subtotal > 0 ? round2(cfg.urgent_fee) : 0;
+
+  const total = round2(subtotal + fee + urgentFee - discount);
   return {
     subtotal: round2(subtotal),
     delivery_fee: round2(fee),
+    urgent_fee: urgentFee,
     discount: round2(discount),
     total,
     free_delivery_above: cfg.free_delivery_above,
