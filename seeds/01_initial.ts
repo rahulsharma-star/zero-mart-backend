@@ -85,6 +85,7 @@ export async function seed(knex: Knex): Promise<void> {
     { key: 'min_order_value', value: JSON.stringify(99) },
     { key: 'currency', value: JSON.stringify('INR') },
     { key: 'support_phone', value: JSON.stringify('+919999999999') },
+    { key: 'whatsapp_number', value: JSON.stringify('+919999999999') },
     { key: 'delivery_payout_per_order', value: JSON.stringify(25) },
     {
       key: 'store',
