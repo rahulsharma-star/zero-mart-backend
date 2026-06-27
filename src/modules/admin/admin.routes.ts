@@ -39,11 +39,13 @@ router.delete('/categories/:id', asyncHandler(async (req, res) => { await svc.de
 
 // ── Products ─────────────────────────────────────────────
 const productSchema = z.object({
+  store_id: z.string().uuid(),
   category_id: z.string().uuid().nullable().optional(),
   name: ml,
   description: ml.partial().optional(),
   unit: z.string().max(60).optional(),
   price: z.number().nonnegative(),
+  extra_charge: z.number().nonnegative().optional(),
   mrp: z.number().nonnegative().optional(),
   stock: z.number().int().min(0).optional(),
   image_url: imageRef.optional(),
@@ -82,14 +84,19 @@ const bannerSchema = z.object({
   image_url: imageRef,
   action_type: z.enum(['category', 'product', 'url', 'none']).optional(),
   action_value: z.string().optional(),
-  screen: z.enum(['home', 'category', 'cart', 'checkout', 'orders', 'profile']).optional(),
+  screen: z.enum(['home', 'category', 'cart', 'checkout', 'orders', 'profile', 'shop']).optional(),
   position: z.enum(['top', 'middle', 'bottom', 'footer']).optional(),
+  store_id: z.string().uuid().nullable().optional(),
+  placement: z.enum(['home', 'shop']).optional(),
   sort_order: z.number().int().optional(),
   is_active: z.boolean().optional(),
 });
 router.get('/banners', asyncHandler(async (_req, res) => ok(res, await svc.listBanners())));
 router.post('/banners', validate({ body: bannerSchema }), asyncHandler(async (req, res) => ok(res, await svc.createBanner(req.body), 'common.ok', 201)));
 router.put('/banners/:id', validate({ body: bannerSchema.partial() }), asyncHandler(async (req, res) => ok(res, await svc.updateBanner(req.params.id, req.body))));
+router.post('/banners/:id/approve', asyncHandler(async (req, res) => ok(res, await svc.setBannerStatus(req.params.id, 'approved'))));
+router.post('/banners/:id/reject', asyncHandler(async (req, res) => ok(res, await svc.setBannerStatus(req.params.id, 'rejected'))));
+router.post('/banners/:id/home', asyncHandler(async (req, res) => ok(res, await svc.pushBannerToHome(req.params.id))));
 router.delete('/banners/:id', asyncHandler(async (req, res) => { await svc.deleteBanner(req.params.id); return ok(res, null); }));
 
 // ── Service areas ────────────────────────────────────────
@@ -134,6 +141,23 @@ const pricingSchema = z.object({
   urgent_fee: z.number().min(0).nullable().optional(),
 });
 router.put('/regions/:id/pricing', validate({ body: pricingSchema }), asyncHandler(async (req, res) => ok(res, await svc.updateRegionPricing(req.params.id, req.body))));
+
+// ── Stores (shops) ───────────────────────────────────────
+const storeSchema = z.object({
+  region_id: z.string().uuid(),
+  name: z.string().min(1),
+  address: z.string().optional(),
+  phone: z.string().optional(),
+  whatsapp: z.string().optional(),
+  lat: z.number().optional(),
+  lng: z.number().optional(),
+  commission_rate: z.number().min(0).max(100).nullable().optional(),
+  is_active: z.boolean().optional(),
+  owner: z.object({ name: z.string().min(1), phone: z.string().regex(/^[6-9]\d{9}$/) }).optional(),
+});
+router.get('/stores', asyncHandler(async (req, res) => ok(res, await svc.listStores({ region_id: req.query.region_id as string }))));
+router.post('/stores', validate({ body: storeSchema }), asyncHandler(async (req, res) => ok(res, await svc.createStore(req.body), 'common.ok', 201)));
+router.put('/stores/:id', validate({ body: storeSchema.partial() }), asyncHandler(async (req, res) => ok(res, await svc.updateStore(req.params.id, req.body))));
 
 const settingsSchema = z.record(z.string(), z.any());
 router.get('/settings', asyncHandler(async (_req, res) => ok(res, await getAllSettings())));

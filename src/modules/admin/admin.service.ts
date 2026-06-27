@@ -84,12 +84,14 @@ export async function listProducts(opts: { page: number; limit: number; search?:
 export async function createProduct(input: any) {
   const [row] = await db('products')
     .insert({
+      store_id: input.store_id ?? null,
       category_id: input.category_id ?? null,
       name: JSON.stringify(input.name),
       description: input.description ? JSON.stringify(input.description) : null,
       slug: slugify(input.name.en) + '-' + Math.random().toString(36).slice(2, 6),
       unit: input.unit ?? null,
       price: input.price,
+      extra_charge: input.extra_charge ?? 0,
       mrp: input.mrp ?? null,
       stock: input.stock ?? 0,
       image_url: input.image_url ?? null,
@@ -102,11 +104,13 @@ export async function createProduct(input: any) {
 }
 export async function updateProduct(id: string, input: any) {
   const patch: Record<string, unknown> = {};
+  if (input.store_id !== undefined) patch.store_id = input.store_id;
   if (input.category_id !== undefined) patch.category_id = input.category_id;
   if (input.name) patch.name = JSON.stringify(input.name);
   if (input.description !== undefined) patch.description = input.description ? JSON.stringify(input.description) : null;
   if (input.unit !== undefined) patch.unit = input.unit;
   if (input.price !== undefined) patch.price = input.price;
+  if (input.extra_charge !== undefined) patch.extra_charge = input.extra_charge;
   if (input.mrp !== undefined) patch.mrp = input.mrp;
   if (input.stock !== undefined) patch.stock = input.stock;
   if (input.image_url !== undefined) patch.image_url = input.image_url;
@@ -368,7 +372,11 @@ export async function listUsers(opts: { page: number; limit: number; search?: st
 
 // ── Banners ──────────────────────────────────────────────
 export async function listBanners() {
-  return db('banners').orderBy('sort_order', 'asc');
+  return db('banners as b')
+    .leftJoin('stores as s', 's.id', 'b.store_id')
+    .leftJoin('users as u', 'u.id', 'b.owner_user_id')
+    .select('b.*', 's.name as store_name', 'u.name as owner_name')
+    .orderBy([{ column: 'b.status', order: 'asc' }, { column: 'b.sort_order', order: 'asc' }]);
 }
 export async function createBanner(input: any) {
   const [row] = await db('banners')
@@ -377,12 +385,32 @@ export async function createBanner(input: any) {
       image_url: input.image_url,
       action_type: input.action_type ?? 'none',
       action_value: input.action_value ?? null,
-      screen: input.screen ?? 'home',
+      screen: input.screen ?? (input.placement === 'shop' ? 'shop' : 'home'),
       position: input.position ?? 'top',
+      store_id: input.store_id ?? null,
+      placement: input.placement ?? 'home',
+      status: 'approved', // admin-created banners are approved by definition
       sort_order: input.sort_order ?? 0,
       is_active: input.is_active ?? true,
     })
     .returning('*');
+  return row;
+}
+
+/** Approve / reject a (vendor) banner. */
+export async function setBannerStatus(id: string, status: 'approved' | 'rejected') {
+  const [row] = await db('banners').where({ id }).update({ status }).returning('*');
+  if (!row) throw ApiError.notFound();
+  return row;
+}
+
+/** Push a banner onto the home screen (and approve it). */
+export async function pushBannerToHome(id: string) {
+  const [row] = await db('banners')
+    .where({ id })
+    .update({ placement: 'home', screen: 'home', status: 'approved' })
+    .returning('*');
+  if (!row) throw ApiError.notFound();
   return row;
 }
 export async function updateBanner(id: string, input: any) {
@@ -393,6 +421,9 @@ export async function updateBanner(id: string, input: any) {
   if (input.action_value !== undefined) patch.action_value = input.action_value;
   if (input.screen !== undefined) patch.screen = input.screen;
   if (input.position !== undefined) patch.position = input.position;
+  if (input.store_id !== undefined) patch.store_id = input.store_id;
+  if (input.placement !== undefined) patch.placement = input.placement;
+  if (input.status !== undefined) patch.status = input.status;
   if (input.sort_order !== undefined) patch.sort_order = input.sort_order;
   if (input.is_active !== undefined) patch.is_active = input.is_active;
   const [row] = await db('banners').where({ id }).update(patch).returning('*');
@@ -402,6 +433,69 @@ export async function updateBanner(id: string, input: any) {
 export async function deleteBanner(id: string) {
   const n = await db('banners').where({ id }).del();
   if (!n) throw ApiError.notFound();
+}
+
+// ── Stores (shops) & vendors ─────────────────────────────
+export async function listStores(opts?: { region_id?: string }) {
+  const q = db('stores as s')
+    .leftJoin('users as u', 'u.id', 's.owner_user_id')
+    .select('s.*', 'u.name as owner_name', 'u.phone as owner_phone');
+  if (opts?.region_id) q.where('s.region_id', opts.region_id);
+  return q.orderBy('s.name', 'asc');
+}
+
+export async function createStore(input: {
+  region_id: string;
+  name: string;
+  address?: string;
+  phone?: string;
+  whatsapp?: string;
+  lat?: number;
+  lng?: number;
+  commission_rate?: number;
+  owner?: { name: string; phone: string };
+}) {
+  return db.transaction(async (trx) => {
+    let ownerUserId: string | null = null;
+    if (input.owner?.phone) {
+      const existing = await trx('users').where({ phone: input.owner.phone }).first();
+      if (existing) {
+        if (existing.role !== 'vendor' && existing.role !== 'customer') throw new ApiError(409, 'common.validation_failed');
+        await trx('users').where({ id: existing.id }).update({ role: 'vendor', name: input.owner.name, region_id: input.region_id });
+        ownerUserId = existing.id;
+      } else {
+        const [u] = await trx('users')
+          .insert({ phone: input.owner.phone, name: input.owner.name, role: 'vendor', region_id: input.region_id, language: 'hi' })
+          .returning('id');
+        ownerUserId = u.id;
+      }
+    }
+    const [row] = await trx('stores')
+      .insert({
+        region_id: input.region_id,
+        name: input.name,
+        address: input.address ?? null,
+        phone: input.phone ?? input.owner?.phone ?? null,
+        whatsapp: input.whatsapp ?? null,
+        lat: input.lat ?? null,
+        lng: input.lng ?? null,
+        commission_rate: input.commission_rate ?? null,
+        owner_user_id: ownerUserId,
+        is_active: true,
+      })
+      .returning('*');
+    return row;
+  });
+}
+
+export async function updateStore(id: string, input: any) {
+  const patch: Record<string, unknown> = {};
+  for (const k of ['name', 'address', 'phone', 'whatsapp', 'lat', 'lng', 'commission_rate', 'is_active', 'region_id']) {
+    if (input[k] !== undefined) patch[k] = input[k];
+  }
+  const [row] = await db('stores').where({ id }).update(patch).returning('*');
+  if (!row) throw ApiError.notFound();
+  return row;
 }
 
 // ── Service areas ────────────────────────────────────────

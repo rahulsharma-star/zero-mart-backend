@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken';
 import { env } from '../config/env';
 
-export type Role = 'customer' | 'delivery_boy' | 'admin' | 'super_admin';
+export type Role = 'customer' | 'delivery_boy' | 'vendor' | 'admin' | 'super_admin';
 
 export interface JwtPayload {
   sub: string; // user id

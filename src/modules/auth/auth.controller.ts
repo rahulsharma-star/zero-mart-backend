@@ -43,6 +43,7 @@ const updateMeSchema = z.object({
   name: z.string().trim().min(1).max(120).optional(),
   email: z.string().trim().email().optional(),
   language: z.enum(['en', 'hi']).optional(),
+  preferred_store_ids: z.array(z.string().uuid()).max(50).optional(),
 });
 
 export async function updateMe(req: Request, res: Response) {

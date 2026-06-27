@@ -15,6 +15,8 @@
   "cart.item_added": "Added to cart",
   "cart.item_removed": "Removed from cart",
   "cart.empty": "Your cart is empty",
+  "cart.mixed_stores": "Please checkout items from one shop at a time",
+  "cart.no_store": "This product is not linked to a shop yet",
   "product.out_of_stock": "This item is out of stock",
   "order.created": "Order placed successfully",
   "order.min_order": "Minimum order value is ₹{min_order_value}",
@@ -23,5 +25,11 @@
   "payment.initiated": "Payment initiated",
   "payment.success": "Payment successful",
   "payment.failed": "Payment failed",
-  "payment.invalid_signature": "Payment verification failed"
+  "payment.invalid_signature": "Payment verification failed",
+  "vendor.no_store": "No shop linked to your account",
+  "request.created": "Request sent to nearby shops",
+  "request.not_matched": "No shop has accepted yet",
+  "request.no_price": "Shop has not quoted a price yet",
+  "request.cannot_cancel": "This request cannot be cancelled",
+  "request.already_matched": "Already matched with a shop"
 }

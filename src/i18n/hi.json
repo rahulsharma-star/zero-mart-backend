@@ -15,6 +15,8 @@
   "cart.item_added": "कार्ट में जोड़ा गया",
   "cart.item_removed": "कार्ट से हटाया गया",
   "cart.empty": "आपका कार्ट खाली है",
+  "cart.mixed_stores": "एक समय में एक ही दुकान का सामान ऑर्डर करें",
+  "cart.no_store": "यह उत्पाद अभी किसी दुकान से जुड़ा नहीं है",
   "product.out_of_stock": "यह वस्तु स्टॉक में नहीं है",
   "order.created": "ऑर्डर सफलतापूर्वक दिया गया",
   "order.min_order": "न्यूनतम ऑर्डर राशि ₹{min_order_value} है",
@@ -23,5 +25,11 @@
   "payment.initiated": "भुगतान शुरू किया गया",
   "payment.success": "भुगतान सफल",
   "payment.failed": "भुगतान विफल",
-  "payment.invalid_signature": "भुगतान सत्यापन विफल"
+  "payment.invalid_signature": "भुगतान सत्यापन विफल",
+  "vendor.no_store": "आपके खाते से कोई दुकान जुड़ी नहीं है",
+  "request.created": "पास की दुकानों को अनुरोध भेजा गया",
+  "request.not_matched": "अभी कोई दुकान ने स्वीकार नहीं किया",
+  "request.no_price": "दुकान ने अभी कीमत नहीं बताई",
+  "request.cannot_cancel": "यह अनुरोध रद्द नहीं किया जा सकता",
+  "request.already_matched": "पहले से किसी दुकान से मिलान हो चुका है"
 }

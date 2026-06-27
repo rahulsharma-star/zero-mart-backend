@@ -1,6 +1,7 @@
 import { Knex } from 'knex';
 import { db } from '../../config/db';
 import { sms } from '../../services/sms';
+import { Lang } from '../../i18n';
 
 /** Multilingual templates per event. Recipient language picks the string. */
 const TEMPLATES: Record<string, { title: { en: string; hi: string }; body: { en: string; hi: string }; channels: string[] }> = {
@@ -98,7 +99,7 @@ export async function processOutbox(limit = 50): Promise<number> {
   return pending.length;
 }
 
-export async function listForUser(userId: string, lang: 'en' | 'hi') {
+export async function listForUser(userId: string, lang: Lang) {
   const rows = await db('notifications')
     .where({ user_id: userId })
     .whereIn('channel', ['inapp', 'push'])

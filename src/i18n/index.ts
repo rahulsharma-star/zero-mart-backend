@@ -1,11 +1,12 @@
 import en from './en.json';
 import hi from './hi.json';
+import mr from './mr.json';
 
-export type Lang = 'en' | 'hi';
-export const SUPPORTED_LANGS: Lang[] = ['en', 'hi'];
+export type Lang = 'en' | 'hi' | 'mr';
+export const SUPPORTED_LANGS: Lang[] = ['en', 'hi', 'mr'];
 export const DEFAULT_LANG: Lang = 'en';
 
-const dictionaries: Record<Lang, Record<string, string>> = { en, hi };
+const dictionaries: Record<Lang, Record<string, string>> = { en, hi, mr };
 
 /** Translate a message key for the given language, with {placeholder} substitution. */
 export function t(key: string, lang: Lang = DEFAULT_LANG, vars?: Record<string, string | number>): string {

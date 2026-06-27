@@ -1,7 +1,7 @@
 import { db } from '../../config/db';
 import { Lang } from '../../i18n';
 import { ApiError } from '../../utils/ApiError';
-import { serializeProduct } from '../catalog/catalog.service';
+import { serializeProduct, effectivePrice } from '../catalog/catalog.service';
 import { computeTotals as computeRegionTotals } from '../pricing/pricing.service';
 
 /** Resolve the user's region (home region, fallback to default address region). */
@@ -17,15 +17,16 @@ export async function resolveUserRegion(userId: string): Promise<string | null> 
 export async function getCart(userId: string, lang: Lang, urgent = false) {
   const rows = await db('cart_items as ci')
     .join('products as p', 'p.id', 'ci.product_id')
+    .leftJoin('stores as s', 's.id', 'p.store_id')
     .where('ci.user_id', userId)
-    .select('ci.id as cart_item_id', 'ci.quantity', 'p.*')
+    .select('ci.id as cart_item_id', 'ci.quantity', 'p.*', 's.name as store_name')
     .orderBy('ci.created_at', 'asc');
 
   const items = rows.map((r) => ({
     cart_item_id: r.cart_item_id,
     quantity: r.quantity,
     product: serializeProduct(r, lang),
-    line_total: Number(r.price) * r.quantity,
+    line_total: effectivePrice(r) * r.quantity,
   }));
 
   const regionId = await resolveUserRegion(userId);
@@ -45,13 +46,33 @@ export async function getCart(userId: string, lang: Lang, urgent = false) {
         0,
         true
       );
-  return { items, totals, urgent_fee_rate: urgentTotals.urgent_fee };
+  const shopName = rows[0]?.store_name ?? null;
+  const u = await db('users').where({ id: userId }).first();
+  const pendingCancelFee = Number(u?.pending_cancel_fee ?? 0);
+  return {
+    items,
+    totals,
+    urgent_fee_rate: urgentTotals.urgent_fee,
+    shop_name: shopName,
+    pending_cancel_fee: pendingCancelFee,
+  };
 }
 
 export async function addItem(userId: string, productId: string, quantity: number, lang: Lang) {
   const product = await db('products').where({ id: productId, is_active: true }).first();
   if (!product) throw ApiError.notFound();
   if (product.stock <= 0) throw new ApiError(409, 'product.out_of_stock');
+  if (!product.store_id) throw new ApiError(422, 'cart.no_store');
+
+  // Single-shop cart: reject if cart has items from a different store.
+  const existing = await db('cart_items as ci')
+    .join('products as p', 'p.id', 'ci.product_id')
+    .where('ci.user_id', userId)
+    .select('p.store_id')
+    .first();
+  if (existing?.store_id && existing.store_id !== product.store_id) {
+    throw new ApiError(409, 'cart.mixed_stores');
+  }
 
   await db('cart_items')
     .insert({ user_id: userId, product_id: productId, quantity })

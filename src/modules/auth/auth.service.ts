@@ -7,7 +7,7 @@ import { ApiError } from '../../utils/ApiError';
 import { signToken } from '../../utils/jwt';
 import { Lang } from '../../i18n';
 
-const STAFF_ROLES = ['delivery_boy', 'admin', 'super_admin'];
+const STAFF_ROLES = ['delivery_boy', 'vendor', 'admin', 'super_admin'];
 const REFRESH_TTL_DAYS = 60;
 
 async function issueRefreshToken(userId: string, deviceInfo?: string): Promise<string> {
@@ -31,6 +31,20 @@ export interface PublicUser {
   email: string | null;
   role: 'customer' | 'admin' | 'delivery';
   language: Lang;
+  preferred_store_ids: string[];
+}
+
+export function parseStoreIds(value: unknown): string[] {
+  if (Array.isArray(value)) return value as string[];
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
 }
 
 function toPublic(u: any): PublicUser {
@@ -41,6 +55,7 @@ function toPublic(u: any): PublicUser {
     email: u.email ?? null,
     role: u.role,
     language: u.language,
+    preferred_store_ids: parseStoreIds(u.preferred_store_ids),
   };
 }
 
@@ -148,12 +163,15 @@ export async function getMe(userId: string): Promise<PublicUser> {
 
 export async function updateMe(
   userId: string,
-  patch: { name?: string; email?: string; language?: Lang }
+  patch: { name?: string; email?: string; language?: Lang; preferred_store_ids?: string[] }
 ): Promise<PublicUser> {
   const clean: Record<string, unknown> = {};
   if (patch.name !== undefined) clean.name = patch.name;
   if (patch.email !== undefined) clean.email = patch.email;
   if (patch.language !== undefined) clean.language = patch.language;
+  if (patch.preferred_store_ids !== undefined) {
+    clean.preferred_store_ids = JSON.stringify(patch.preferred_store_ids);
+  }
   const [updated] = await db('users').where({ id: userId }).update(clean).returning('*');
   if (!updated) throw ApiError.notFound();
   return toPublic(updated);

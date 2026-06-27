@@ -9,6 +9,8 @@ import paymentRoutes from './modules/payments/payments.routes';
 import adminRoutes from './modules/admin/admin.routes';
 import deliveryRoutes from './modules/delivery/delivery.routes';
 import notificationRoutes from './modules/notifications/notifications.routes';
+import vendorRoutes from './modules/vendor/vendor.routes';
+import requestRoutes from './modules/requests/requests.routes';
 import uploadRoutes from './modules/uploads/uploads.routes';
 
 const router = Router();
@@ -24,6 +26,8 @@ router.use('/serviceability', serviceabilityRoutes);
 router.use('/payments', paymentRoutes);
 router.use('/admin', adminRoutes);
 router.use('/delivery', deliveryRoutes);
+router.use('/vendor', vendorRoutes);
+router.use('/requests', requestRoutes);
 router.use('/notifications', notificationRoutes);
 router.use('/uploads', uploadRoutes);
 

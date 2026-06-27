@@ -4,6 +4,8 @@ const img = (seed: string) => `https://picsum.photos/seed/${seed}/600/600`;
 
 export async function seed(knex: Knex): Promise<void> {
   // wipe (child → parent)
+  await knex('store_order_offers').del().catch(() => {});
+  await knex('open_requests').del().catch(() => {});
   await knex('delivery_earnings').del().catch(() => {});
   await knex('delivery_assignments').del().catch(() => {});
   await knex('order_status_history').del().catch(() => {});
@@ -19,7 +21,7 @@ export async function seed(knex: Knex): Promise<void> {
   await knex('service_areas').del();
   await knex('stores').del().catch(() => {});
   await knex('app_settings').del();
-  await knex('users').whereIn('role', ['admin', 'delivery_boy', 'super_admin']).del();
+  await knex('users').whereIn('role', ['admin', 'delivery_boy', 'vendor', 'super_admin']).del();
   await knex('regions').del().catch(() => {});
 
   // ── region + store ─────────────────────────────────────
@@ -28,10 +30,38 @@ export async function seed(knex: Knex): Promise<void> {
     .returning('id');
   const regionId = region.id;
 
-  const [store] = await knex('stores')
-    .insert({ region_id: regionId, name: 'Zero Mart - CP', address: 'Connaught Place, New Delhi' })
+  const [vendor1] = await knex('users')
+    .insert({ phone: '9999922222', name: 'Ramu Kirana', role: 'vendor', language: 'hi', region_id: regionId })
     .returning('id');
-  const storeId = store.id;
+  const [vendor2] = await knex('users')
+    .insert({ phone: '9999933333', name: 'Shyam General Store', role: 'vendor', language: 'hi', region_id: regionId })
+    .returning('id');
+
+  const [store1] = await knex('stores')
+    .insert({
+      region_id: regionId,
+      name: 'Ramu Kirana',
+      address: 'Main Bazaar, Connaught Place',
+      phone: '9999922222',
+      whatsapp: '919999922222',
+      commission_rate: 10,
+      owner_user_id: vendor1.id,
+      is_active: true,
+    })
+    .returning('id');
+  const [store2] = await knex('stores')
+    .insert({
+      region_id: regionId,
+      name: 'Shyam General Store',
+      address: 'Daryaganj Road',
+      phone: '9999933333',
+      whatsapp: '919999933333',
+      commission_rate: 12,
+      owner_user_id: vendor2.id,
+      is_active: true,
+    })
+    .returning('id');
+  const storeId = store1.id;
 
   await knex('region_pricing').insert({
     region_id: regionId,
@@ -86,12 +116,13 @@ export async function seed(knex: Knex): Promise<void> {
     { key: 'currency', value: JSON.stringify('INR') },
     { key: 'support_phone', value: JSON.stringify('+919999999999') },
     { key: 'whatsapp_number', value: JSON.stringify('+919999999999') },
+    { key: 'default_commission_rate', value: JSON.stringify(10) },
     { key: 'delivery_payout_per_order', value: JSON.stringify(25) },
     {
       key: 'store',
       value: JSON.stringify({
-        name: { en: 'Zero Mart', hi: 'ज़ीरो मार्ट' },
-        tagline: { en: 'Delivered in minutes', hi: 'मिनटों में डिलीवरी' },
+        name: { en: 'Local Dukaan', hi: 'लोकल दुकान' },
+        tagline: { en: 'Your neighbourhood shops', hi: 'आपके मोहल्ले की दुकानें' },
       }),
     },
   ]);
@@ -140,20 +171,21 @@ export async function seed(knex: Knex): Promise<void> {
 
   // ── products ───────────────────────────────────────────
   const products = [
-    { cat: 'fruits-vegetables', slug: 'banana-1dozen', en: 'Banana (Robusta)', hi: 'केला (रोबस्टा)', unit: '1 dozen', price: 49, mrp: 60 },
-    { cat: 'fruits-vegetables', slug: 'tomato-1kg', en: 'Tomato', hi: 'टमाटर', unit: '1 kg', price: 32, mrp: 40 },
-    { cat: 'fruits-vegetables', slug: 'onion-1kg', en: 'Onion', hi: 'प्याज़', unit: '1 kg', price: 35, mrp: 45 },
-    { cat: 'dairy-bakery', slug: 'milk-1l', en: 'Toned Milk', hi: 'टोंड दूध', unit: '1 L', price: 56, mrp: 56 },
-    { cat: 'dairy-bakery', slug: 'bread-400g', en: 'Brown Bread', hi: 'ब्राउन ब्रेड', unit: '400 g', price: 45, mrp: 50 },
-    { cat: 'snacks-beverages', slug: 'chips-90g', en: 'Potato Chips', hi: 'आलू चिप्स', unit: '90 g', price: 30, mrp: 35 },
-    { cat: 'snacks-beverages', slug: 'cola-750ml', en: 'Cola', hi: 'कोला', unit: '750 ml', price: 40, mrp: 45 },
-    { cat: 'staples', slug: 'atta-5kg', en: 'Whole Wheat Atta', hi: 'गेहूं का आटा', unit: '5 kg', price: 245, mrp: 280 },
-    { cat: 'staples', slug: 'rice-5kg', en: 'Basmati Rice', hi: 'बासमती चावल', unit: '5 kg', price: 420, mrp: 480 },
-    { cat: 'personal-care', slug: 'soap-4pack', en: 'Bathing Soap', hi: 'नहाने का साबुन', unit: 'pack of 4', price: 120, mrp: 140 },
+    { cat: 'fruits-vegetables', store: store1.id, slug: 'banana-1dozen', en: 'Banana (Robusta)', hi: 'केला (रोबस्टा)', unit: '1 dozen', price: 49, mrp: 60 },
+    { cat: 'fruits-vegetables', store: store1.id, slug: 'tomato-1kg', en: 'Tomato', hi: 'टमाटर', unit: '1 kg', price: 32, mrp: 40 },
+    { cat: 'fruits-vegetables', store: store2.id, slug: 'onion-1kg', en: 'Onion', hi: 'प्याज़', unit: '1 kg', price: 35, mrp: 45 },
+    { cat: 'dairy-bakery', store: store1.id, slug: 'milk-1l', en: 'Toned Milk', hi: 'टोंड दूध', unit: '1 L', price: 56, mrp: 56 },
+    { cat: 'dairy-bakery', store: store2.id, slug: 'bread-400g', en: 'Brown Bread', hi: 'ब्राउन ब्रेड', unit: '400 g', price: 45, mrp: 50 },
+    { cat: 'snacks-beverages', store: store2.id, slug: 'chips-90g', en: 'Potato Chips', hi: 'आलू चिप्स', unit: '90 g', price: 30, mrp: 35 },
+    { cat: 'snacks-beverages', store: store1.id, slug: 'cola-750ml', en: 'Cola', hi: 'कोला', unit: '750 ml', price: 40, mrp: 45 },
+    { cat: 'staples', store: store1.id, slug: 'atta-5kg', en: 'Whole Wheat Atta', hi: 'गेहूं का आटा', unit: '5 kg', price: 245, mrp: 280 },
+    { cat: 'staples', store: store2.id, slug: 'rice-5kg', en: 'Basmati Rice', hi: 'बासमती चावल', unit: '5 kg', price: 420, mrp: 480 },
+    { cat: 'personal-care', store: store2.id, slug: 'soap-4pack', en: 'Bathing Soap', hi: 'नहाने का साबुन', unit: 'pack of 4', price: 120, mrp: 140 },
   ];
 
   await knex('products').insert(
     products.map((p, i) => ({
+      store_id: p.store,
       category_id: catId(p.cat),
       slug: p.slug,
       name: JSON.stringify({ en: p.en, hi: p.hi }),
