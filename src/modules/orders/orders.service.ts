@@ -9,8 +9,10 @@ import { enqueue } from '../notifications/notifications.service';
 export const CANCEL_PENALTY = 10;
 import { applyTransition } from './order-state';
 import { resolveCommissionRate, splitCommission } from '../commission/commission.service';
+import { chargeToKhata } from '../khata/khata.service';
+import { getCart } from '../cart/cart.service';
 
-export type PaymentMethod = 'upi' | 'card' | 'cod';
+export type PaymentMethod = 'upi' | 'card' | 'cod' | 'khata';
 
 function genOrderNumber(): string {
   const ts = Date.now().toString(36).toUpperCase();
@@ -175,6 +177,17 @@ export async function createOrder(
       if (!affected) throw new ApiError(409, 'product.out_of_stock');
     }
 
+    // Pay-on-khata: put the order total on the customer's shop credit.
+    if (input.payment_method === 'khata') {
+      await chargeToKhata(trx, {
+        storeId,
+        customerUserId: userId,
+        orderId: created.id,
+        amount: grandTotal,
+        note: created.order_number,
+      });
+    }
+
     await trx('order_status_history').insert({ order_id: created.id, to_status: 'placed', changed_by: userId });
     await enqueue(trx, { userId, event: 'order_placed', vars: { order: created.order_number } });
     if (store.owner_user_id) {
@@ -333,4 +346,40 @@ export async function rescheduleOrder(userId: string, orderId: string, scheduled
     await trx('orders').where({ id: orderId }).update({ scheduled_at: scheduledAt });
   });
   return getOrder(userId, orderId, lang);
+}
+
+/**
+ * Re-add a past order's items to the cart ("Buy again").
+ * Skips items whose product is gone or out of stock; caps quantity at stock.
+ * Replaces the current cart so the single-shop rule is never violated.
+ */
+export async function reorder(userId: string, orderId: string, lang: Lang) {
+  const order = await db('orders').where({ id: orderId, user_id: userId }).first();
+  if (!order) throw new ApiError(404, 'order.not_found');
+
+  const items = await db('order_items').where({ order_id: orderId }).whereNotNull('product_id');
+  if (!items.length) throw new ApiError(400, 'order.reorder_empty');
+
+  let added = 0;
+  let skipped = 0;
+  await db.transaction(async (trx) => {
+    await trx('cart_items').where({ user_id: userId }).del();
+    for (const it of items) {
+      const p = await trx('products').where({ id: it.product_id, is_active: true }).first();
+      if (!p || p.stock <= 0 || !p.store_id) {
+        skipped++;
+        continue;
+      }
+      const qty = Math.min(it.quantity, p.stock);
+      await trx('cart_items')
+        .insert({ user_id: userId, product_id: p.id, quantity: qty })
+        .onConflict(['user_id', 'product_id'])
+        .merge({ quantity: qty, updated_at: trx.fn.now() });
+      added++;
+    }
+  });
+
+  if (added === 0) throw new ApiError(409, 'order.reorder_empty');
+  const cart = await getCart(userId, lang);
+  return { added, skipped, cart };
 }

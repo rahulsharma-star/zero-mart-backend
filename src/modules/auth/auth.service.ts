@@ -6,6 +6,7 @@ import { sms } from '../../services/sms';
 import { ApiError } from '../../utils/ApiError';
 import { signToken } from '../../utils/jwt';
 import { Lang } from '../../i18n';
+import { applyShopCodeToUser } from '../../utils/shopCode';
 
 const STAFF_ROLES = ['delivery_boy', 'vendor', 'admin', 'super_admin'];
 const REFRESH_TTL_DAYS = 60;
@@ -29,7 +30,7 @@ export interface PublicUser {
   phone: string;
   name: string | null;
   email: string | null;
-  role: 'customer' | 'admin' | 'delivery';
+  role: 'customer' | 'admin' | 'super_admin' | 'delivery_boy' | 'vendor';
   language: Lang;
   preferred_store_ids: string[];
 }
@@ -88,6 +89,7 @@ export async function verifyOtp(input: {
   code: string;
   name?: string;
   language?: Lang;
+  shop_code?: string;
 }): Promise<{ token: string; accessToken: string; refreshToken: string; user: PublicUser; isNewUser: boolean }> {
   const record = await db('otp_codes')
     .where({ phone: input.phone })
@@ -130,6 +132,11 @@ export async function verifyOtp(input: {
     user = updated;
   }
 
+  if (input.shop_code?.trim()) {
+    await applyShopCodeToUser(user.id, input.shop_code);
+    user = (await db('users').where({ id: user.id }).first())!;
+  }
+
   const accessToken = signToken({ sub: user.id, role: user.role, phone: user.phone });
   const refreshToken = await issueRefreshToken(user.id);
   // `token` kept for backward compatibility with current clients.
@@ -163,8 +170,11 @@ export async function getMe(userId: string): Promise<PublicUser> {
 
 export async function updateMe(
   userId: string,
-  patch: { name?: string; email?: string; language?: Lang; preferred_store_ids?: string[] }
+  patch: { name?: string; email?: string; language?: Lang; preferred_store_ids?: string[]; shop_code?: string | null }
 ): Promise<PublicUser> {
+  if (patch.shop_code !== undefined) {
+    await applyShopCodeToUser(userId, patch.shop_code || null);
+  }
   const clean: Record<string, unknown> = {};
   if (patch.name !== undefined) clean.name = patch.name;
   if (patch.email !== undefined) clean.email = patch.email;
@@ -172,7 +182,10 @@ export async function updateMe(
   if (patch.preferred_store_ids !== undefined) {
     clean.preferred_store_ids = JSON.stringify(patch.preferred_store_ids);
   }
-  const [updated] = await db('users').where({ id: userId }).update(clean).returning('*');
-  if (!updated) throw ApiError.notFound();
-  return toPublic(updated);
+  if (Object.keys(clean).length) {
+    await db('users').where({ id: userId }).update(clean);
+  }
+  const user = await db('users').where({ id: userId }).first();
+  if (!user) throw ApiError.notFound();
+  return toPublic(user);
 }

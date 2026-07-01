@@ -15,6 +15,7 @@ export const UPLOAD_DIR = path.join(process.cwd(), 'uploads');
 fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
 const ALLOWED = /^image\/(jpeg|png|webp|gif|svg\+xml)$/;
+const AUDIO_ALLOWED = /^audio\/(webm|mpeg|mp4|m4a|x-m4a|wav|ogg|aac|x-caf)$/i;
 
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, UPLOAD_DIR),
@@ -34,13 +35,42 @@ const upload = multer({
   },
 });
 
+const voiceStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, UPLOAD_DIR),
+  filename: (_req, file, cb) => {
+    const ext = (path.extname(file.originalname) || '.webm').toLowerCase();
+    const name = `voice-${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`;
+    cb(null, name);
+  },
+});
+
+const uploadVoice = multer({
+  storage: voiceStorage,
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (AUDIO_ALLOWED.test(file.mimetype)) cb(null, true);
+    else cb(new ApiError(400, 'common.validation_failed'));
+  },
+});
+
 const router = Router();
 
 router.post(
   '/',
   authRequired,
-  requireRole('admin'),
+  requireRole('admin', 'vendor', 'super_admin'),
   upload.single('file'),
+  (req, res) => {
+    if (!req.file) throw ApiError.badRequest();
+    return ok(res, { path: `/uploads/${req.file.filename}` }, 'common.ok', 201);
+  }
+);
+
+router.post(
+  '/voice',
+  authRequired,
+  requireRole('customer', 'vendor', 'admin', 'super_admin'),
+  uploadVoice.single('file'),
   (req, res) => {
     if (!req.file) throw ApiError.badRequest();
     return ok(res, { path: `/uploads/${req.file.filename}` }, 'common.ok', 201);

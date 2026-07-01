@@ -42,8 +42,9 @@ export async function me(req: Request, res: Response) {
 const updateMeSchema = z.object({
   name: z.string().trim().min(1).max(120).optional(),
   email: z.string().trim().email().optional(),
-  language: z.enum(['en', 'hi']).optional(),
+  language: z.enum(['en', 'hi', 'mr']).optional(),
   preferred_store_ids: z.array(z.string().uuid()).max(50).optional(),
+  shop_code: z.string().trim().min(4).max(12).nullable().optional(),
 });
 
 export async function updateMe(req: Request, res: Response) {

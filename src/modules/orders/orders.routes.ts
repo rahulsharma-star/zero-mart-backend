@@ -10,7 +10,7 @@ router.use(authRequired);
 
 const createSchema = z.object({
   address_id: z.string().uuid(),
-  payment_method: z.enum(['upi', 'card', 'cod']),
+  payment_method: z.enum(['upi', 'card', 'cod', 'khata']),
   notes: z.string().trim().max(500).optional(),
   is_urgent: z.boolean().optional(),
 });
@@ -36,6 +36,11 @@ router.get(
 router.post(
   '/:id/cancel',
   asyncHandler(async (req, res) => ok(res, await svc.cancelOrder(req.user!.sub, req.params.id, req.lang)))
+);
+
+router.post(
+  '/:id/reorder',
+  asyncHandler(async (req, res) => ok(res, await svc.reorder(req.user!.sub, req.params.id, req.lang), 'order.reordered'))
 );
 
 const rescheduleSchema = z.object({ scheduled_at: z.string().min(1) });

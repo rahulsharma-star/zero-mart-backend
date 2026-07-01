@@ -2,6 +2,7 @@ import { db } from '../../config/db';
 import { env } from '../../config/env';
 import { ApiError } from '../../utils/ApiError';
 import { applyTransition } from '../orders/order-state';
+import { activateSubscription } from '../subscriptions/subscriptions.service';
 import {
   buildPaymentRequest,
   payuActionUrl,
@@ -81,14 +82,22 @@ export async function handlePayuCallback(body: Record<string, string>) {
       updated_at: trx.fn.now(),
     });
 
-    await trx('orders')
-      .where({ id: payment.order_id })
-      .update({
-        payment_status: success ? 'paid' : 'failed',
-        status: success ? 'confirmed' : 'pending',
-        updated_at: trx.fn.now(),
-      });
+    if (payment.order_id) {
+      await trx('orders')
+        .where({ id: payment.order_id })
+        .update({
+          payment_status: success ? 'paid' : 'failed',
+          status: success ? 'confirmed' : 'pending',
+          updated_at: trx.fn.now(),
+        });
+    }
   });
 
-  return { orderId: payment.order_id, success };
+  // Subscription payment → activate the plan on success.
+  if (payment.subscription_id) {
+    if (success) await activateSubscription(payment.subscription_id);
+    return { kind: 'subscription' as const, subscriptionId: payment.subscription_id, orderId: null, success };
+  }
+
+  return { kind: 'order' as const, orderId: payment.order_id, subscriptionId: null, success };
 }

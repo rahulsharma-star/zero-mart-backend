@@ -5,11 +5,27 @@ import { ok, asyncHandler } from '../../utils/http';
 import { authRequired, requireRole } from '../../middleware/auth';
 import { validate } from '../../middleware/validate';
 import { getAllSettings, setSetting } from '../../services/settings.service';
+import * as supportSvc from '../support-chat/support-chat.service';
+import * as subSvc from '../subscriptions/subscriptions.service';
 
 const router = Router();
-router.use(authRequired, requireRole('admin'));
+router.use(authRequired, requireRole('admin', 'super_admin'));
 
-const ml = z.object({ en: z.string().min(1), hi: z.string().optional() });
+// ── Subscription plans (admin's recurring-income products) ──
+const planSchema = z.object({
+  name: z.string().trim().min(1).max(120),
+  price: z.number().nonnegative(),
+  duration_days: z.number().int().positive(),
+  max_products: z.number().int().positive().nullable().optional(),
+  is_active: z.boolean().optional(),
+  sort_order: z.number().int().optional(),
+});
+router.get('/subscription-plans', asyncHandler(async (_req, res) => ok(res, await subSvc.adminListPlans())));
+router.post('/subscription-plans', validate({ body: planSchema }), asyncHandler(async (req, res) => ok(res, await subSvc.createPlan(req.body), 'common.ok', 201)));
+router.put('/subscription-plans/:id', validate({ body: planSchema.partial() }), asyncHandler(async (req, res) => ok(res, await subSvc.updatePlan(req.params.id, req.body))));
+router.delete('/subscription-plans/:id', asyncHandler(async (req, res) => { await subSvc.deletePlan(req.params.id); return ok(res, null); }));
+
+const ml = z.object({ en: z.string().min(1), hi: z.string().optional(), mr: z.string().optional() });
 // Accepts an absolute URL or an uploaded relative path ("/uploads/..").
 const imageRef = z.string().refine(
   (v) => /^https?:\/\//.test(v) || v.startsWith('/uploads/'),
@@ -20,6 +36,7 @@ const pageQuery = (req: any) => ({
   limit: Math.min(100, Math.max(1, parseInt(String(req.query.limit ?? '20'), 10) || 20)),
   search: req.query.search as string | undefined,
   status: req.query.status as string | undefined,
+  role: req.query.role as string | undefined,
 });
 
 // ── Dashboard ────────────────────────────────────────────
@@ -36,6 +53,7 @@ router.get('/categories', asyncHandler(async (_req, res) => ok(res, await svc.li
 router.post('/categories', validate({ body: categorySchema }), asyncHandler(async (req, res) => ok(res, await svc.createCategory(req.body), 'common.ok', 201)));
 router.put('/categories/:id', validate({ body: categorySchema.partial() }), asyncHandler(async (req, res) => ok(res, await svc.updateCategory(req.params.id, req.body))));
 router.delete('/categories/:id', asyncHandler(async (req, res) => { await svc.deleteCategory(req.params.id); return ok(res, null); }));
+router.patch('/categories/:id/feature', validate({ body: z.object({ featured: z.boolean() }) }), asyncHandler(async (req, res) => ok(res, await svc.setCategoryFeature(req.params.id, req.body.featured))));
 
 // ── Products ─────────────────────────────────────────────
 const productSchema = z.object({
@@ -77,6 +95,39 @@ router.post('/orders/:id/unassign', asyncHandler(async (req, res) => ok(res, awa
 
 // ── Users ────────────────────────────────────────────────
 router.get('/users', asyncHandler(async (req, res) => ok(res, await svc.listUsers(pageQuery(req)))));
+router.get('/vendors', asyncHandler(async (req, res) => ok(res, await svc.listVendorsWithStats(pageQuery(req)))));
+
+// ── Admin ↔ Vendor support chat ──────────────────────────
+router.get('/support-chats', asyncHandler(async (_req, res) => ok(res, await supportSvc.listChatsForAdmin())));
+router.post(
+  '/support-chats',
+  validate({ body: z.object({ store_id: z.string().uuid() }) }),
+  asyncHandler(async (req, res) => ok(res, await supportSvc.openChatForAdmin(req.body.store_id), 'common.ok', 201))
+);
+router.get('/support-chats/:id', asyncHandler(async (req, res) => ok(res, await supportSvc.getChat(req.params.id, req.user!.sub, req.user!.role))));
+router.get('/support-chats/:id/messages', asyncHandler(async (req, res) => {
+  const limit = req.query.limit ? parseInt(String(req.query.limit), 10) : undefined;
+  const before = req.query.before as string | undefined;
+  return ok(res, await supportSvc.listMessages(req.params.id, req.user!.sub, req.user!.role, { limit, before }));
+}));
+router.post(
+  '/support-chats/:id/messages',
+  validate({
+    body: z
+      .object({
+        body: z.string().max(2000).optional(),
+        message_type: z.enum(['text', 'voice']).optional(),
+        audio_url: z.string().max(512).optional(),
+      })
+      .refine(
+        (v) =>
+          (v.message_type === 'voice' && !!v.audio_url) ||
+          ((!v.message_type || v.message_type === 'text') && !!v.body?.trim()),
+        { message: 'chat.empty_message' }
+      ),
+  }),
+  asyncHandler(async (req, res) => ok(res, await supportSvc.sendMessage(req.params.id, req.user!.sub, req.user!.role, req.body), 'common.ok', 201))
+);
 
 // ── Banners ──────────────────────────────────────────────
 const bannerSchema = z.object({
@@ -152,6 +203,7 @@ const storeSchema = z.object({
   lat: z.number().optional(),
   lng: z.number().optional(),
   commission_rate: z.number().min(0).max(100).nullable().optional(),
+  shop_code: z.string().min(4).max(12).optional(),
   is_active: z.boolean().optional(),
   owner: z.object({ name: z.string().min(1), phone: z.string().regex(/^[6-9]\d{9}$/) }).optional(),
 });

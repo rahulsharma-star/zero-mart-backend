@@ -1,6 +1,7 @@
 import { db } from '../../config/db';
 import { Lang, localizeField } from '../../i18n';
 import { ApiError } from '../../utils/ApiError';
+import { findStoreByCode } from '../../utils/shopCode';
 
 export function serializeCategory(row: any, lang: Lang) {
   return {
@@ -9,6 +10,8 @@ export function serializeCategory(row: any, lang: Lang) {
     name: localizeField(row.name, lang),
     image_url: row.image_url,
     sort_order: row.sort_order,
+    store_id: row.store_id ?? null,
+    featured: !!row.featured,
   };
 }
 
@@ -38,8 +41,15 @@ export function serializeProduct(row: any, lang: Lang) {
   };
 }
 
+/** Home categories = only the ones featured on home (admin-approved). */
 export async function listCategories(lang: Lang) {
-  const rows = await db('categories').where({ is_active: true }).orderBy('sort_order', 'asc');
+  const rows = await db('categories').where({ is_active: true, featured: true }).orderBy('sort_order', 'asc');
+  return rows.map((r) => serializeCategory(r, lang));
+}
+
+/** All active categories that belong to a specific shop. */
+export async function listStoreCategories(storeId: string, lang: Lang) {
+  const rows = await db('categories').where({ store_id: storeId, is_active: true }).orderBy('sort_order', 'asc');
   return rows.map((r) => serializeCategory(r, lang));
 }
 
@@ -84,11 +94,12 @@ export async function listProducts(
     query.whereIn('p.store_id', opts.preferredStoreIds);
   }
   if (opts.search) {
-    // search within the JSONB name (en + hi)
-    query.andWhereRaw(`(p.name->>'en' ILIKE ? OR p.name->>'hi' ILIKE ?)`, [
-      `%${opts.search}%`,
-      `%${opts.search}%`,
-    ]);
+    const term = `%${opts.search}%`;
+    query.andWhereRaw(
+      `(p.name->>'en' ILIKE ? OR p.name->>'hi' ILIKE ? OR p.name->>'mr' ILIKE ?
+        OR p.slug ILIKE ? OR p.description->>'en' ILIKE ? OR p.description->>'hi' ILIKE ?)`,
+      [term, term, term, term, term, term]
+    );
   }
 
   const offset = (opts.page - 1) * opts.limit;
@@ -123,6 +134,7 @@ export function serializeStore(row: any) {
   return {
     id: row.id,
     name: row.name,
+    shop_code: row.shop_code ?? null,
     address: row.address ?? null,
     phone: row.phone ?? null,
     whatsapp: row.whatsapp ?? null,
@@ -210,6 +222,18 @@ function serializeBanner(r: any, lang: Lang) {
   };
 }
 
+/** Public lookup — validate a shop code (registration / settings). */
+export async function lookupStoreByCode(code: string) {
+  const store = await findStoreByCode(code);
+  if (!store) throw new ApiError(404, 'shop.code_invalid');
+  return {
+    id: store.id,
+    name: store.name,
+    shop_code: store.shop_code,
+    address: store.address ?? null,
+  };
+}
+
 export async function getStore(id: string, lang: Lang) {
   const row = await db('stores as s').where({ 's.id': id, 's.is_active': true }).select('s.*').first();
   if (!row) throw ApiError.notFound();
@@ -217,7 +241,8 @@ export async function getStore(id: string, lang: Lang) {
     .where({ store_id: id, is_active: true })
     .count<{ count: string }[]>('id as count');
   const banners = await getStoreBanners(id, lang);
-  return { ...serializeStore({ ...row, product_count: count }), banners };
+  const categories = await listStoreCategories(id, lang);
+  return { ...serializeStore({ ...row, product_count: count }), banners, categories };
 }
 
 /** Approved banners shown on a specific shop's page. */
@@ -235,4 +260,94 @@ export async function getBanners(lang: Lang, screen?: string) {
   if (screen) q.andWhere({ screen });
   const rows = await q.orderBy('sort_order', 'asc');
   return rows.map((r) => serializeBanner(r, lang));
+}
+
+// ── Voice order: turn a spoken sentence into cart-ready items ─────────────
+const VOICE_NUM: Record<string, number> = {
+  ek: 1, do: 2, teen: 3, tin: 3, char: 4, chaar: 4, panch: 5, paanch: 5,
+  chhe: 6, che: 6, chhah: 6, saat: 7, sat: 7, aath: 8, ath: 8, nau: 9, das: 10, dus: 10,
+  'एक': 1, 'दो': 2, 'तीन': 3, 'चार': 4, 'पांच': 5, 'पाँच': 5, 'छह': 6, 'छे': 6,
+  'सात': 7, 'आठ': 8, 'नौ': 9, 'दस': 10,
+};
+const VOICE_UNITS = new Set([
+  'kilo', 'kilos', 'kg', 'kgs', 'किलो', 'किलोग्राम', 'gram', 'grams', 'g', 'ग्राम', 'ग्रा',
+  'litre', 'liter', 'litres', 'liters', 'ltr', 'l', 'लीटर', 'ली', 'packet', 'packets', 'pkt',
+  'पैकेट', 'पैकिट', 'dozen', 'दर्जन', 'piece', 'pieces', 'pcs', 'pc', 'नग', 'bottle', 'bottles',
+  'बोतल', 'ml', 'मिली', 'मि',
+]);
+const VOICE_FILLER = new Set([
+  'chahiye', 'chaiye', 'चाहिए', 'चाइजे', 'चाइजै', 'de', 'do', 'दे', 'दो', 'dena', 'देना', 'dedo',
+  'please', 'plz', 'ka', 'ki', 'ke', 'का', 'की', 'के', 'and', 'mujhe', 'मुझे', 'me', 'हमें', 'humein', 'the', 'a',
+]);
+
+/**
+ * Parse a voice transcript (hi / mr / en) into matched catalog items.
+ * Splits on separators + "aur"/"और", pulls out quantity + unit words, then
+ * matches the remaining phrase against product names. Returns matched items
+ * (product + quantity) plus phrases it could not match.
+ */
+export async function parseVoiceOrder(
+  lang: Lang,
+  transcript: string,
+  opts: { storeId?: string; preferredStoreIds?: string[] }
+) {
+  const norm = String(transcript || '').toLowerCase().replace(/[।]/g, ',');
+  const segments = norm
+    .split(/\s*(?:,|\n|;|\band\b|\baur\b|और|अर)\s*/i)
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  const items: { product: ReturnType<typeof serializeProduct>; quantity: number; matched_text: string }[] = [];
+  const unmatched: string[] = [];
+  const seen = new Set<string>();
+
+  for (const seg of segments) {
+    const tokens = seg.split(/\s+/).filter(Boolean);
+    let qty = 1;
+    const kept: string[] = [];
+    for (const tk of tokens) {
+      const digits = tk.match(/^(\d+)/);
+      if (digits) { qty = Math.min(99, parseInt(digits[1], 10) || 1); continue; }
+      if (VOICE_NUM[tk] != null) { qty = VOICE_NUM[tk]; continue; }
+      if (VOICE_UNITS.has(tk)) continue;
+      if (VOICE_FILLER.has(tk)) continue;
+      kept.push(tk);
+    }
+    const phrase = kept.join(' ').trim();
+    if (!phrase) continue;
+
+    const res = await listProducts(lang, {
+      search: phrase,
+      storeId: opts.storeId,
+      preferredStoreIds: opts.preferredStoreIds,
+      page: 1,
+      limit: 1,
+    });
+    const prod = res.items[0];
+    if (prod && !seen.has(prod.id)) {
+      seen.add(prod.id);
+      items.push({ product: prod, quantity: qty, matched_text: phrase });
+    } else if (!prod) {
+      unmatched.push(seg);
+    }
+  }
+
+  return { items, unmatched };
+}
+
+/** Active vendor notices for the website ticker (all shops or preferred filter). */
+export async function listVendorNotices(lang: Lang, preferredStoreIds?: string[]) {
+  const q = db('vendor_notices as n')
+    .join('stores as s', 's.id', 'n.store_id')
+    .where('n.is_active', true)
+    .where('s.is_active', true)
+    .select('n.*', 's.name as store_name');
+  if (preferredStoreIds?.length) q.whereIn('n.store_id', preferredStoreIds);
+  const rows = await q.orderBy('n.updated_at', 'desc').limit(40);
+  return rows.map((r) => ({
+    id: r.id,
+    store_id: r.store_id,
+    store_name: r.store_name,
+    message: localizeField(r.message, lang),
+  }));
 }

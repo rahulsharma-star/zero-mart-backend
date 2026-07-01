@@ -75,9 +75,37 @@
 
 **F. Cancellation penalty (₹10)** — order **processing** me jaane ke baad cancel kiya → **agle order** par ₹10 extra, uske baad nahi.
 
-**G. Vendor apne delivery boys khud add kare.**
+**G. Vendor apne delivery boys khud add kare.** — ✅ DONE
+- Backend: `GET/POST/PUT /vendor/delivery-boys` (har boy `store_id` se vendor ki dukaan se juda).
+- Vendor order `ready_for_pickup` par apne boy ko assign: `POST /vendor/orders/:id/assign` + `unassign`.
+- Admin vendor panel: **Delivery Boys** page + Orders drawer me assign.
+- Mobile vendor: Delivery Boys screen + order detail me assign.
 
-**H. Marwadi *content*** — abhi sirf server messages Marwadi me hain; product/category naam abhi en/hi me hain. Admin me Marwadi field add karke content bhi Marwadi me.
+**H. Marwadi *content*** — ✅ DONE (forms)
+- Admin Products + Categories me **Marwadi (mr)** field.
+- Vendor web + mobile product form me Hindi + Marwadi + English naam.
+- Product search me Marwadi naam bhi search hota hai.
+
+**I. Mobile app — Category → Shops → Products flow** — ✅ DONE (web jaisa)
+
+**J. Mobile vendor — products + banners (app se)** — ✅ DONE
+- VendorProducts list + add/edit form (Hindi/Marwadi naam, price, stock).
+- VendorBanners — shop/home banner (image link se).
+
+**K. Commission dashboard** — ✅ DONE
+- Admin dashboard: tumhara **commission**, vendor payouts, **shop-wise breakdown**.
+- Vendor dashboard: **total sales**, **your payout**, is mahine ki kamai.
+
+---
+
+## 🔴 Abhi bhi baaki (launch ke liye)
+
+| Feature | Status |
+|---------|--------|
+| Map API + location-based delivery charge | ⏳ V3 — abhi fixed charge + GPS distance (web) |
+| Production SMS (MSG91) + PayU keys | ⏳ Dev mode |
+| Push notifications (FCM) | ⏳ Outbox worker hai, push nahi |
+| Mobile product photo (camera upload) | ⏳ Abhi image link; web se photo daal sakte ho |
 
 ---
 

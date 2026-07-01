@@ -17,6 +17,7 @@ export async function seed(knex: Knex): Promise<void> {
   await knex('products').del();
   await knex('categories').del();
   await knex('banners').del();
+  await knex('vendor_notices').del().catch(() => {});
   await knex('region_pricing').del().catch(() => {});
   await knex('service_areas').del();
   await knex('stores').del().catch(() => {});
@@ -41,6 +42,7 @@ export async function seed(knex: Knex): Promise<void> {
     .insert({
       region_id: regionId,
       name: 'Ramu Kirana',
+      shop_code: 'RAMU01',
       address: 'Main Bazaar, Connaught Place',
       phone: '9999922222',
       whatsapp: '919999922222',
@@ -53,6 +55,7 @@ export async function seed(knex: Knex): Promise<void> {
     .insert({
       region_id: regionId,
       name: 'Shyam General Store',
+      shop_code: 'SHYAM01',
       address: 'Daryaganj Road',
       phone: '9999933333',
       whatsapp: '919999933333',
@@ -78,7 +81,7 @@ export async function seed(knex: Knex): Promise<void> {
     phone: '9999900000',
     name: 'Zero Admin',
     email: 'admin@zero.local',
-    role: 'admin',
+    role: 'super_admin',
     language: 'en',
     region_id: regionId,
   });
@@ -121,8 +124,8 @@ export async function seed(knex: Knex): Promise<void> {
     {
       key: 'store',
       value: JSON.stringify({
-        name: { en: 'Local Dukaan', hi: 'लोकल दुकान' },
-        tagline: { en: 'Your neighbourhood shops', hi: 'आपके मोहल्ले की दुकानें' },
+        name: { en: 'Zero', hi: 'ज़ीरो', mr: 'ज़ीरो' },
+        tagline: { en: 'Your neighbourhood shops', hi: 'आपके मोहल्ले की दुकानें', mr: 'थारे मोहल्ले री दुकान' },
       }),
     },
   ]);
@@ -203,4 +206,25 @@ export async function seed(knex: Knex): Promise<void> {
       sort_order: i + 1,
     }))
   );
+
+  await knex('vendor_notices').insert([
+    {
+      store_id: store1.id,
+      message: JSON.stringify({
+        en: 'Fresh bananas today — only ₹49/dozen!',
+        hi: 'आज ताज़ा केला — सिर्फ़ ₹४९/दर्जन!',
+        mr: 'आज ताजो केलो — बस ₹४९/दर्जन!',
+      }),
+      is_active: true,
+    },
+    {
+      store_id: store2.id,
+      message: JSON.stringify({
+        en: 'Free delivery on orders above ₹299',
+        hi: '₹२९९ से ऊपर ऑर्डर पर मुफ़्त डिलीवरी',
+        mr: '₹२९९ सूं उपर ऑर्डर पर मुफ्त डिलीवरी',
+      }),
+      is_active: true,
+    },
+  ]);
 }

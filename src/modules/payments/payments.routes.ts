@@ -23,9 +23,13 @@ router.post(
 // updates the order, then redirects the app via deep link.
 const callback = asyncHandler(async (req, res) => {
   const body = { ...req.body, ...req.query } as Record<string, string>;
-  const { orderId, success } = await svc.handlePayuCallback(body);
+  const result = await svc.handlePayuCallback(body);
+  const status = result.success ? 'success' : 'failed';
   // Deep link back into the mobile app (configure scheme in the app).
-  const target = `zero://payment/result?orderId=${orderId}&status=${success ? 'success' : 'failed'}`;
+  const target =
+    result.kind === 'subscription'
+      ? `zero://subscription/result?subscriptionId=${result.subscriptionId}&status=${status}`
+      : `zero://payment/result?orderId=${result.orderId}&status=${status}`;
   res.redirect(303, target);
 });
 

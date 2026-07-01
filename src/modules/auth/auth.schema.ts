@@ -15,7 +15,8 @@ export const verifyOtpSchema = z.object({
   code: z.string().trim().min(4).max(8),
   // optional profile sent on first-time signup
   name: z.string().trim().min(1).max(120).optional(),
-  language: z.enum(['en', 'hi']).optional(),
+  language: z.enum(['en', 'hi', 'mr']).optional(),
+  shop_code: z.string().trim().min(4).max(12).optional(),
 });
 
 export type RequestOtpInput = z.infer<typeof requestOtpSchema>;

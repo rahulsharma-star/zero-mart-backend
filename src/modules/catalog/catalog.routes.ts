@@ -11,10 +11,13 @@ router.use(authOptional);
 
 router.get('/home', asyncHandler(ctrl.home));
 router.get('/banners', asyncHandler(ctrl.banners));
+router.get('/notices', asyncHandler(ctrl.notices));
 router.get('/categories', asyncHandler(ctrl.categories));
+router.get('/stores/by-code/:code', asyncHandler(ctrl.storeByCode));
 router.get('/stores', asyncHandler(ctrl.stores));
 router.get('/stores/:id', asyncHandler(ctrl.store));
 router.get('/products', asyncHandler(ctrl.products));
+router.post('/voice-order', asyncHandler(ctrl.voiceOrder));
 router.get('/products/:idOrSlug', asyncHandler(ctrl.product));
 
 export default router;

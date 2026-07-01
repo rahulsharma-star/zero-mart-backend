@@ -11,9 +11,12 @@ export async function products(req: Request, res: Response) {
   const page = Math.max(1, parseInt(String(req.query.page ?? '1'), 10) || 1);
   const limit = Math.min(50, Math.max(1, parseInt(String(req.query.limit ?? '20'), 10) || 20));
   const preferredStoreIds = await svc.getPreferredStoreIds(req.user?.sub);
+  const search =
+    (req.query.search as string | undefined) ||
+    (req.query.q as string | undefined);
   const result = await svc.listProducts(req.lang, {
     categorySlug: req.query.category as string | undefined,
-    search: req.query.search as string | undefined,
+    search,
     storeId: req.query.store_id as string | undefined,
     preferredStoreIds,
     page,
@@ -26,8 +29,28 @@ export async function product(req: Request, res: Response) {
   return ok(res, await svc.getProduct(req.lang, req.params.idOrSlug));
 }
 
+/** Voice order: parse a spoken sentence into matched catalog items. */
+export async function voiceOrder(req: Request, res: Response) {
+  const transcript = String(req.body?.transcript ?? '').slice(0, 400);
+  const preferredStoreIds = await svc.getPreferredStoreIds(req.user?.sub);
+  const result = await svc.parseVoiceOrder(req.lang, transcript, {
+    storeId: (req.body?.store_id as string | undefined) || undefined,
+    preferredStoreIds,
+  });
+  return ok(res, result);
+}
+
 export async function banners(req: Request, res: Response) {
   return ok(res, await svc.getBanners(req.lang, req.query.screen as string | undefined));
+}
+
+export async function notices(req: Request, res: Response) {
+  const preferredStoreIds = await svc.getPreferredStoreIds(req.user?.sub);
+  return ok(res, await svc.listVendorNotices(req.lang, preferredStoreIds));
+}
+
+export async function storeByCode(req: Request, res: Response) {
+  return ok(res, await svc.lookupStoreByCode(String(req.params.code)));
 }
 
 export async function stores(req: Request, res: Response) {

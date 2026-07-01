@@ -12,6 +12,9 @@ import notificationRoutes from './modules/notifications/notifications.routes';
 import vendorRoutes from './modules/vendor/vendor.routes';
 import requestRoutes from './modules/requests/requests.routes';
 import uploadRoutes from './modules/uploads/uploads.routes';
+import chatRoutes from './modules/chat/chat.routes';
+import khataRoutes from './modules/khata/khata.routes';
+import subscriptionRoutes from './modules/subscriptions/subscriptions.routes';
 
 const router = Router();
 
@@ -30,5 +33,8 @@ router.use('/vendor', vendorRoutes);
 router.use('/requests', requestRoutes);
 router.use('/notifications', notificationRoutes);
 router.use('/uploads', uploadRoutes);
+router.use('/chats', chatRoutes);
+router.use('/khata', khataRoutes);
+router.use('/subscriptions', subscriptionRoutes);
 
 export default router;

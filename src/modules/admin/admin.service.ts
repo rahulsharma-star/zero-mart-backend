@@ -2,9 +2,10 @@ import { db } from '../../config/db';
 import { ApiError } from '../../utils/ApiError';
 import { applyTransition, ORDER_STATUSES } from '../orders/order-state';
 import { enqueue } from '../notifications/notifications.service';
+import { generateShopCode } from '../../utils/shopCode';
 
-/** Multilingual text field { en, hi }. */
-type Ml = { en: string; hi?: string };
+/** Multilingual text field { en, hi, mr? }. */
+type Ml = { en: string; hi?: string; mr?: string };
 
 function slugify(s: string): string {
   return s
@@ -21,8 +22,35 @@ export async function dashboard() {
   const [users] = await db('users').where({ role: 'customer' }).count<{ count: string }[]>('id as count');
   const [products] = await db('products').count<{ count: string }[]>('id as count');
   const revenueRow = await db('orders').where({ payment_status: 'paid' }).sum<{ sum: string }[]>('total as sum');
+  const commissionRow = await db('orders').where({ payment_status: 'paid' }).sum<{ sum: string }[]>('platform_commission as sum');
+  const vendorPayoutRow = await db('orders').where({ payment_status: 'paid' }).sum<{ sum: string }[]>('vendor_payout as sum');
   const byStatus = await db('orders').select('status').count('id as count').groupBy('status');
-  const recent = await db('orders').orderBy('created_at', 'desc').limit(10);
+  const recent = await db('orders as o')
+    .leftJoin('stores as s', 's.id', 'o.store_id')
+    .orderBy('o.created_at', 'desc')
+    .limit(10)
+    .select('o.*', 's.name as store_name');
+
+  const byStore = await db('orders as o')
+    .join('stores as s', 's.id', 'o.store_id')
+    .where('o.payment_status', 'paid')
+    .groupBy('s.id', 's.name')
+    .select('s.id as store_id', 's.name as store_name')
+    .sum('o.total as sales')
+    .sum('o.platform_commission as commission')
+    .sum('o.vendor_payout as vendor_payout')
+    .count('o.id as orders')
+    .orderBy('commission', 'desc');
+
+  const monthStart = new Date();
+  monthStart.setDate(1);
+  monthStart.setHours(0, 0, 0, 0);
+  const monthCommission = (
+    await db('orders')
+      .where('payment_status', 'paid')
+      .where('created_at', '>=', monthStart)
+      .sum<{ sum: string }[]>('platform_commission as sum')
+  )[0];
 
   return {
     totals: {
@@ -30,15 +58,39 @@ export async function dashboard() {
       customers: Number(users.count),
       products: Number(products.count),
       revenue: Number(revenueRow[0]?.sum ?? 0),
+      commission: Number(commissionRow[0]?.sum ?? 0),
+      vendor_payouts: Number(vendorPayoutRow[0]?.sum ?? 0),
+      commission_this_month: Number(monthCommission?.sum ?? 0),
     },
     orders_by_status: byStatus.map((r: any) => ({ status: r.status, count: Number(r.count) })),
     recent_orders: recent,
+    commission_by_store: byStore.map((r: any) => ({
+      store_id: r.store_id,
+      store_name: r.store_name,
+      orders: Number(r.orders),
+      sales: Number(r.sales ?? 0),
+      commission: Number(r.commission ?? 0),
+      vendor_payout: Number(r.vendor_payout ?? 0),
+    })),
   };
 }
 
 // ── Categories ───────────────────────────────────────────
 export async function listCategories() {
-  return db('categories').orderBy('sort_order', 'asc');
+  return db('categories as c')
+    .leftJoin('stores as s', 's.id', 'c.store_id')
+    .select('c.*', 's.name as store_name')
+    .orderBy('c.sort_order', 'asc');
+}
+
+/** Admin features / unfeatures a category on the home screen (also resolves requests). */
+export async function setCategoryFeature(id: string, featured: boolean) {
+  const [row] = await db('categories')
+    .where({ id })
+    .update({ featured, feature_status: featured ? 'approved' : 'rejected' })
+    .returning('*');
+  if (!row) throw ApiError.notFound();
+  return row;
 }
 export async function createCategory(input: { name: Ml; image_url?: string; sort_order?: number; is_active?: boolean }) {
   const [row] = await db('categories')
@@ -71,7 +123,11 @@ export async function deleteCategory(id: string) {
 export async function listProducts(opts: { page: number; limit: number; search?: string }) {
   const q = db('products');
   if (opts.search) {
-    q.whereRaw(`(name->>'en' ILIKE ? OR name->>'hi' ILIKE ?)`, [`%${opts.search}%`, `%${opts.search}%`]);
+    q.whereRaw(`(name->>'en' ILIKE ? OR name->>'hi' ILIKE ? OR name->>'mr' ILIKE ?)`, [
+      `%${opts.search}%`,
+      `%${opts.search}%`,
+      `%${opts.search}%`,
+    ]);
   }
   const [{ count }] = await q.clone().count<{ count: string }[]>('id as count');
   const items = await q
@@ -357,9 +413,10 @@ export async function updateRegionPricing(regionId: string, input: any) {
 }
 
 // ── Users ────────────────────────────────────────────────
-export async function listUsers(opts: { page: number; limit: number; search?: string }) {
+export async function listUsers(opts: { page: number; limit: number; search?: string; role?: string }) {
   const q = db('users');
-  if (opts.search) q.where('phone', 'ILIKE', `%${opts.search}%`).orWhere('name', 'ILIKE', `%${opts.search}%`);
+  if (opts.role) q.where({ role: opts.role });
+  if (opts.search) q.where((b) => b.where('phone', 'ILIKE', `%${opts.search}%`).orWhere('name', 'ILIKE', `%${opts.search}%`));
   const [{ count }] = await q.clone().count<{ count: string }[]>('id as count');
   const items = await q
     .clone()
@@ -367,6 +424,96 @@ export async function listUsers(opts: { page: number; limit: number; search?: st
     .orderBy('created_at', 'desc')
     .limit(opts.limit)
     .offset((opts.page - 1) * opts.limit);
+  return { items, total: Number(count), page: opts.page, limit: opts.limit };
+}
+
+/** Vendors with per-store stats for admin dashboard. */
+export async function listVendorsWithStats(opts: { page: number; limit: number; search?: string }) {
+  const q = db('stores as s')
+    .join('users as u', 'u.id', 's.owner_user_id')
+    .where('u.role', 'vendor')
+    .select(
+      's.id as store_id',
+      's.name as store_name',
+      's.shop_code',
+      's.phone as store_phone',
+      's.commission_rate',
+      's.is_active as store_active',
+      's.created_at as store_created_at',
+      'u.id as vendor_user_id',
+      'u.name as vendor_name',
+      'u.phone as vendor_phone',
+      'u.email as vendor_email',
+      'u.is_active as vendor_active',
+      'u.created_at as vendor_joined'
+    );
+
+  if (opts.search) {
+    const s = `%${opts.search}%`;
+    q.andWhere((b) =>
+      b.where('s.name', 'ILIKE', s).orWhere('u.name', 'ILIKE', s).orWhere('u.phone', 'ILIKE', s).orWhere('s.shop_code', 'ILIKE', s)
+    );
+  }
+
+  const [{ count }] = await q.clone().clearSelect().count<{ count: string }[]>('s.id as count');
+  const stores = await q.orderBy('s.name', 'asc').limit(opts.limit).offset((opts.page - 1) * opts.limit);
+
+  const storeIds = stores.map((s: any) => s.store_id);
+  if (!storeIds.length) return { items: [], total: Number(count), page: opts.page, limit: opts.limit };
+
+  const productCounts = await db('products')
+    .whereIn('store_id', storeIds)
+    .groupBy('store_id')
+    .select('store_id')
+    .count('id as products')
+    .sum({ active_products: db.raw("CASE WHEN is_active THEN 1 ELSE 0 END") });
+
+  const orderStats = await db('orders')
+    .whereIn('store_id', storeIds)
+    .groupBy('store_id')
+    .select('store_id')
+    .count('id as total_orders')
+    .sum({ total_sales: db.raw("CASE WHEN payment_status = 'paid' THEN total ELSE 0 END") })
+    .sum({ commission: db.raw("CASE WHEN payment_status = 'paid' THEN platform_commission ELSE 0 END") })
+    .sum({ vendor_payout: db.raw("CASE WHEN payment_status = 'paid' THEN vendor_payout ELSE 0 END") });
+
+  const completedOrders = await db('orders')
+    .whereIn('store_id', storeIds)
+    .where({ status: 'delivered' })
+    .groupBy('store_id')
+    .select('store_id')
+    .count('id as completed_orders');
+
+  const pendingOrders = await db('orders')
+    .whereIn('store_id', storeIds)
+    .whereIn('status', ['placed', 'confirmed', 'preparing', 'ready_for_pickup', 'assigned', 'out_for_delivery'])
+    .groupBy('store_id')
+    .select('store_id')
+    .count('id as active_orders');
+
+  const pcMap = Object.fromEntries(productCounts.map((r: any) => [r.store_id, r]));
+  const osMap = Object.fromEntries(orderStats.map((r: any) => [r.store_id, r]));
+  const coMap = Object.fromEntries(completedOrders.map((r: any) => [r.store_id, r]));
+  const poMap = Object.fromEntries(pendingOrders.map((r: any) => [r.store_id, r]));
+
+  const items = stores.map((s: any) => {
+    const pc = pcMap[s.store_id] ?? {};
+    const os = osMap[s.store_id] ?? {};
+    const co = coMap[s.store_id] ?? {};
+    const po = poMap[s.store_id] ?? {};
+    return {
+      ...s,
+      products: Number(pc.products ?? 0),
+      active_products: Number(pc.active_products ?? 0),
+      total_orders: Number(os.total_orders ?? 0),
+      completed_orders: Number(co.completed_orders ?? 0),
+      active_orders: Number(po.active_orders ?? 0),
+      total_sales: Number(os.total_sales ?? 0),
+      commission: Number(os.commission ?? 0),
+      vendor_payout: Number(os.vendor_payout ?? 0),
+    };
+  });
+
   return { items, total: Number(count), page: opts.page, limit: opts.limit };
 }
 
@@ -453,6 +600,7 @@ export async function createStore(input: {
   lat?: number;
   lng?: number;
   commission_rate?: number;
+  shop_code?: string;
   owner?: { name: string; phone: string };
 }) {
   return db.transaction(async (trx) => {
@@ -470,10 +618,12 @@ export async function createStore(input: {
         ownerUserId = u.id;
       }
     }
+    const shopCode = await generateShopCode(trx, input.name, input.shop_code);
     const [row] = await trx('stores')
       .insert({
         region_id: input.region_id,
         name: input.name,
+        shop_code: shopCode,
         address: input.address ?? null,
         phone: input.phone ?? input.owner?.phone ?? null,
         whatsapp: input.whatsapp ?? null,
@@ -492,6 +642,15 @@ export async function updateStore(id: string, input: any) {
   const patch: Record<string, unknown> = {};
   for (const k of ['name', 'address', 'phone', 'whatsapp', 'lat', 'lng', 'commission_rate', 'is_active', 'region_id']) {
     if (input[k] !== undefined) patch[k] = input[k];
+  }
+  if (input.shop_code !== undefined) {
+    const { normalizeShopCode, generateShopCode } = await import('../../utils/shopCode');
+    const normalized = normalizeShopCode(input.shop_code);
+    if (normalized.length >= 4) {
+      const taken = await db('stores').where({ shop_code: normalized }).whereNot('id', id).first();
+      if (taken) throw new ApiError(409, 'shop.code_taken');
+      patch.shop_code = normalized;
+    }
   }
   const [row] = await db('stores').where({ id }).update(patch).returning('*');
   if (!row) throw ApiError.notFound();

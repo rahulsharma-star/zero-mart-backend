@@ -1,0 +1,831 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>Zero Process Doc</title></head><body style="font-family:Arial,Helvetica,sans-serif;font-size:11pt;color:#222;max-width:800px;margin:40px auto;padding:0 20px"><h1 style="color:#000;font-size:22pt">Zero — Complete Process Documentation</h1>
+<p style="margin:8px 0;line-height:1.6"><strong>Hyperlocal Marketplace | Inventory-Free | Commission Model</strong></p>
+<p style="margin:8px 0;line-height:1.6"><em>Document version: July 2026</em>  </p>
+<p style="margin:8px 0;line-height:1.6"><em>Yeh document ab tak banayi gayi poori process, flow aur technical setup explain karti hai — Google Docs me copy-paste karne ke liye ready.</em></p>
+<hr style="border:none;border-top:1px solid #ddd;margin:20px 0"/>
+<h2 style="color:#111;margin-top:24px;border-bottom:2px solid #e5e7eb;padding-bottom:6px">Table of Contents</h2>
+<p style="margin:4px 0 4px 20px">1. [Project Overview](#1-project-overview)</p>
+<p style="margin:4px 0 4px 20px">2. [Business Model &amp; Vision](#2-business-model--vision)</p>
+<p style="margin:4px 0 4px 20px">3. [System Architecture](#3-system-architecture)</p>
+<p style="margin:4px 0 4px 20px">4. [User Roles &amp; Login](#4-user-roles--login)</p>
+<p style="margin:4px 0 4px 20px">5. [Customer Complete Journey](#5-customer-complete-journey)</p>
+<p style="margin:4px 0 4px 20px">6. [Shop Code System](#6-shop-code-system)</p>
+<p style="margin:4px 0 4px 20px">7. [Preferred Shops Filter](#7-preferred-shops-filter)</p>
+<p style="margin:4px 0 4px 20px">8. [Browse Flow: Category → Shops → Products](#8-browse-flow-category--shops--products)</p>
+<p style="margin:4px 0 4px 20px">9. [Order Process (Direct Order)](#9-order-process-direct-order)</p>
+<p style="margin:4px 0 4px 20px">10. [Broadcast Request Flow](#10-broadcast-request-flow)</p>
+<p style="margin:4px 0 4px 20px">11. [Payment &amp; Delivery](#11-payment--delivery)</p>
+<p style="margin:4px 0 4px 20px">12. [Cancellation Penalty (₹10)](#12-cancellation-penalty-10)</p>
+<p style="margin:4px 0 4px 20px">13. [Vendor Complete Journey](#13-vendor-complete-journey)</p>
+<p style="margin:4px 0 4px 20px">14. [Vendor Scrolling Notices](#14-vendor-scrolling-notices)</p>
+<p style="margin:4px 0 4px 20px">15. [Product Chat (Customer ↔ Vendor)](#15-product-chat-customer--vendor)</p>
+<p style="margin:4px 0 4px 20px">16. [Voice Messages in Chat](#16-voice-messages-in-chat)</p>
+<p style="margin:4px 0 4px 20px">17. [Delivery Boy Process](#17-delivery-boy-process)</p>
+<p style="margin:4px 0 4px 20px">18. [Admin Panel Process](#18-admin-panel-process)</p>
+<p style="margin:4px 0 4px 20px">19. [Commission &amp; Payouts](#19-commission--payouts)</p>
+<p style="margin:4px 0 4px 20px">20. [Website (Customer) — Screens &amp; Features](#20-website-customer--screens--features)</p>
+<p style="margin:4px 0 4px 20px">21. [Mobile App — Screens &amp; Features](#21-mobile-app--screens--features)</p>
+<p style="margin:4px 0 4px 20px">22. [Languages &amp; Voice Search](#22-languages--voice-search)</p>
+<p style="margin:4px 0 4px 20px">23. [Location &amp; Nearby Shops](#23-location--nearby-shops)</p>
+<p style="margin:4px 0 4px 20px">24. [Database Tables (Summary)](#24-database-tables-summary)</p>
+<p style="margin:4px 0 4px 20px">25. [API Endpoints (Summary)](#25-api-endpoints-summary)</p>
+<p style="margin:4px 0 4px 20px">26. [WebSocket (Real-time Chat)](#26-websocket-real-time-chat)</p>
+<p style="margin:4px 0 4px 20px">27. [File Uploads](#27-file-uploads)</p>
+<p style="margin:4px 0 4px 20px">28. [Security Rules](#28-security-rules)</p>
+<p style="margin:4px 0 4px 20px">29. [Development Setup](#29-development-setup)</p>
+<p style="margin:4px 0 4px 20px">30. [Test Accounts (Seed Data)](#30-test-accounts-seed-data)</p>
+<p style="margin:4px 0 4px 20px">31. [Completed vs Pending](#31-completed-vs-pending)</p>
+<hr style="border:none;border-top:1px solid #ddd;margin:20px 0"/>
+<h2 style="color:#111;margin-top:24px;border-bottom:2px solid #e5e7eb;padding-bottom:6px">1. Project Overview</h2>
+<p style="margin:8px 0;line-height:1.6"><strong>Zero</strong> ek hyperlocal marketplace hai jisme hum khud maal store nahi karte. Hum <strong>gaav aur city dono</strong> ke customers ko unke <strong>aas-paas ki dukaanon</strong> se connect karte hain aur har order par <strong>commission</strong> lete hain.</p>
+<h3 style="color:#1a1a1a;margin-top:18px">Core idea</h3>
+<p style="margin:4px 0 4px 20px">• Customer apni pasand ki dukaan se samaan order karta hai</p>
+<p style="margin:4px 0 4px 20px">• Vendor apne products khud manage karta hai</p>
+<p style="margin:4px 0 4px 20px">• Delivery boy order deliver karta hai (vendor khud add karta hai)</p>
+<p style="margin:4px 0 4px 20px">• Admin poora platform control karta hai</p>
+<h3 style="color:#1a1a1a;margin-top:18px">Apps in the system</h3>
+<table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse;width:100%;margin:12px 0">
+<tr><th>App</th><th>Path</th><th>Kaun use karta hai</th></tr>
+<tr><td><strong>Backend API</strong></td><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">apps/backend</span></td><td>Sab apps isse connect hoti hain</td></tr>
+<tr><td><strong>Customer Website</strong></td><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">apps/web</span></td><td>Sirf customer (browser)</td></tr>
+<tr><td><strong>Mobile App</strong></td><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">apps/mobile</span></td><td>Customer + Vendor + Delivery (ek hi app)</td></tr>
+<tr><td><strong>Admin / Vendor Web</strong></td><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">apps/admin</span></td><td>Admin + Vendor (web panel)</td></tr>
+</table>
+<hr style="border:none;border-top:1px solid #ddd;margin:20px 0"/>
+<h2 style="color:#111;margin-top:24px;border-bottom:2px solid #e5e7eb;padding-bottom:6px">2. Business Model &amp; Vision</h2>
+<h3 style="color:#1a1a1a;margin-top:18px">Revenue</h3>
+<p style="margin:4px 0 4px 20px">• Har dukaan par <strong>commission rate</strong> set hota hai (e.g. Ramu Kirana = 10%, Shyam Store = 12%)</p>
+<p style="margin:4px 0 4px 20px">• Order complete hone par commission calculate hota hai</p>
+<p style="margin:4px 0 4px 20px">• Admin dashboard par <strong>total commission</strong>, <strong>vendor payouts</strong>, <strong>shop-wise breakdown</strong> dikhta hai</p>
+<h3 style="color:#1a1a1a;margin-top:18px">Gaav-friendly design principles</h3>
+<p style="margin:4px 0 4px 20px">• Bade buttons, kam English, zyada icons</p>
+<p style="margin:4px 0 4px 20px">• <strong>3 languages</strong>: Hindi, English, Marwadi (Marwadi)</p>
+<p style="margin:4px 0 4px 20px">• <strong>Voice search</strong> har jagah (bol kar khojo)</p>
+<p style="margin:4px 0 4px 20px">• Order 2–3 tap me</p>
+<p style="margin:4px 0 4px 20px">• Simple OTP login (password nahi)</p>
+<h3 style="color:#1a1a1a;margin-top:18px">Marketplace rules</h3>
+<p style="margin:4px 0 4px 20px">• Ek cart me <strong>sirf ek shop</strong> ke products (single-shop cart)</p>
+<p style="margin:4px 0 4px 20px">• Customer 2 tarah se order kar sakta hai:</p>
+<p style="margin:8px 0;line-height:1.6">  1. <strong>Particular vendor</strong> se direct</p>
+<p style="margin:8px 0;line-height:1.6">  2. <strong>Sab vendors ko request</strong> bhej kar — jo accept kare</p>
+<hr style="border:none;border-top:1px solid #ddd;margin:20px 0"/>
+<h2 style="color:#111;margin-top:24px;border-bottom:2px solid #e5e7eb;padding-bottom:6px">3. System Architecture</h2>
+<p style="font-family:Consolas,monospace;font-size:10pt;background:#f8f9fa;border:1px solid #e5e7eb;padding:10px;margin:10px 0;line-height:1.5">
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐<br/>
+│  Customer Web   │     │   Mobile App    │     │  Admin Panel    │<br/>
+│  (React+Vite)   │     │ (React Native)  │     │  (React+Vite)   │<br/>
+└────────┬────────┘     └────────┬────────┘     └────────┬────────┘<br/>
+         │                       │                       │<br/>
+         │    REST API + WebSocket (Socket.io)           │<br/>
+         └───────────────────────┼───────────────────────┘<br/>
+                                 │<br/>
+                    ┌────────────▼────────────┐<br/>
+                    │   Backend (Node.js)     │<br/>
+                    │   Express + PostgreSQL  │<br/>
+                    │   Port: 4000            │<br/>
+                    └────────────┬────────────┘<br/>
+                                 │<br/>
+                    ┌────────────▼────────────┐<br/>
+                    │   PostgreSQL Database   │<br/>
+                    └─────────────────────────┘<br/>
+</p>
+<h3 style="color:#1a1a1a;margin-top:18px">Tech stack</h3>
+<p style="margin:4px 0 4px 20px">• <strong>Backend</strong>: Node.js, Express, TypeScript, Knex (migrations), PostgreSQL, JWT auth, Socket.io</p>
+<p style="margin:4px 0 4px 20px">• <strong>Web</strong>: React, Vite, React Router, i18next, Socket.io-client</p>
+<p style="margin:4px 0 4px 20px">• <strong>Mobile</strong>: React Native, React Navigation, i18next, Socket.io-client</p>
+<p style="margin:4px 0 4px 20px">• <strong>Admin</strong>: React, Vite, Ant Design style layout</p>
+<hr style="border:none;border-top:1px solid #ddd;margin:20px 0"/>
+<h2 style="color:#111;margin-top:24px;border-bottom:2px solid #e5e7eb;padding-bottom:6px">4. User Roles &amp; Login</h2>
+<h3 style="color:#1a1a1a;margin-top:18px">4.1 Customer Login (Website + Mobile)</h3>
+<p style="margin:8px 0;line-height:1.6"><strong>Flow:</strong></p>
+<p style="margin:4px 0 4px 20px">1. Customer apna <strong>phone number</strong> daalta hai</p>
+<p style="margin:4px 0 4px 20px">2. Backend <strong>OTP</strong> generate karta hai (dev mode me console/log me dikhta hai)</p>
+<p style="margin:4px 0 4px 20px">3. Customer OTP verify karta hai</p>
+<p style="margin:4px 0 4px 20px">4. Naya user ho to automatically <strong>customer</strong> role milta hai</p>
+<p style="margin:4px 0 4px 20px">5. Optional: <strong>Shop code</strong> daal sakta hai (login/signup ke time ya baad me)</p>
+<p style="margin:8px 0;line-height:1.6"><strong>API:</strong></p>
+<p style="margin:4px 0 4px 20px">• <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">POST /api/v1/auth/otp/request</span> — OTP bhejo</p>
+<p style="margin:4px 0 4px 20px">• <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">POST /api/v1/auth/otp/verify</span> — OTP verify + JWT token</p>
+<p style="margin:4px 0 4px 20px">• Body me optional: <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">shop_code</span> (4–12 characters)</p>
+<h3 style="color:#1a1a1a;margin-top:18px">4.2 Member Login (Mobile only — Vendor / Delivery / Admin)</h3>
+<p style="margin:8px 0;line-height:1.6"><strong>Flow:</strong></p>
+<p style="margin:4px 0 4px 20px">1. Mobile app me <strong>"Member Login"</strong> option</p>
+<p style="margin:4px 0 4px 20px">2. Sirf <strong>pehle se registered staff</strong> accounts OTP le sakte hain</p>
+<p style="margin:4px 0 4px 20px">3. Role ke hisaab se alag screen khulti hai:</p>
+<p style="margin:8px 0;line-height:1.6">   - <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">vendor</span> → Vendor Dashboard</p>
+<p style="margin:8px 0;line-height:1.6">   - <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">delivery_boy</span> → Delivery Home</p>
+<p style="margin:8px 0;line-height:1.6">   - <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">admin</span> → (mobile me limited; full admin web panel se)</p>
+<p style="margin:8px 0;line-height:1.6"><strong>API:</strong></p>
+<p style="margin:4px 0 4px 20px">• Same OTP endpoints, lekin <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">context: "member"</span> — sirf existing staff</p>
+<h3 style="color:#1a1a1a;margin-top:18px">4.3 Vendor Web Login (Admin panel)</h3>
+<p style="margin:4px 0 4px 20px">• Vendor <strong>admin website</strong> (<span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">apps/admin</span>) par login karta hai</p>
+<p style="margin:4px 0 4px 20px">• Role = <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">vendor</span> → sirf <strong>"My Shop"</strong> menu dikhta hai (products, orders, banners, notices, delivery boys)</p>
+<h3 style="color:#1a1a1a;margin-top:18px">4.4 Session</h3>
+<p style="margin:4px 0 4px 20px">• JWT token (30 days default)</p>
+<p style="margin:4px 0 4px 20px">• Refresh token support</p>
+<p style="margin:4px 0 4px 20px">• Har request me <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">Authorization: Bearer &lt;token&gt;</span></p>
+<p style="margin:4px 0 4px 20px">• Language header se UI language set hoti hai</p>
+<hr style="border:none;border-top:1px solid #ddd;margin:20px 0"/>
+<h2 style="color:#111;margin-top:24px;border-bottom:2px solid #e5e7eb;padding-bottom:6px">5. Customer Complete Journey</h2>
+<h3 style="color:#1a1a1a;margin-top:18px">Step-by-step (end to end)</h3>
+<p style="font-family:Consolas,monospace;font-size:10pt;background:#f8f9fa;border:1px solid #e5e7eb;padding:10px;margin:10px 0;line-height:1.5">
+Login (OTP) → [Optional: Shop Code] → Home<br/>
+    → Category choose karo<br/>
+    → Nearby shops dikhengi<br/>
+    → Ek shop kholo<br/>
+    → Products dekho<br/>
+    → Product detail → Cart me daalo<br/>
+    → Checkout (address + COD/Online)<br/>
+    → Order placed<br/>
+    → Orders me track karo<br/>
+    → [Optional] Product par "दुकान से बात करें" → Chat<br/>
+</p>
+<h3 style="color:#1a1a1a;margin-top:18px">Home page par kya dikhta hai</h3>
+<p style="margin:4px 0 4px 20px">• Banners (admin-approved home banners)</p>
+<p style="margin:4px 0 4px 20px">• Categories grid</p>
+<p style="margin:4px 0 4px 20px">• Products (preferred shop filter ke saath)</p>
+<p style="margin:4px 0 4px 20px">• <strong>"Sab dukaanon se pucho"</strong> — broadcast request button</p>
+<p style="margin:4px 0 4px 20px">• Voice search</p>
+<p style="margin:4px 0 4px 20px">• Shop updates ticker (vendor notices) — desktop sidebar / mobile bottom sheet</p>
+<h3 style="color:#1a1a1a;margin-top:18px">Profile me kya kar sakta hai</h3>
+<p style="margin:4px 0 4px 20px">• Naam, email, language change</p>
+<p style="margin:4px 0 4px 20px">• <strong>Preferred shops</strong> select (1 ya zyada dukaan)</p>
+<p style="margin:4px 0 4px 20px">• <strong>Shop code</strong> enter/change</p>
+<p style="margin:4px 0 4px 20px">• Logout</p>
+<hr style="border:none;border-top:1px solid #ddd;margin:20px 0"/>
+<h2 style="color:#111;margin-top:24px;border-bottom:2px solid #e5e7eb;padding-bottom:6px">6. Shop Code System</h2>
+<h3 style="color:#1a1a1a;margin-top:18px">Kya hai?</h3>
+<p style="margin:8px 0;line-height:1.6">Har dukaan ka ek unique <strong>shop code</strong> hota hai — jaise <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">RAMU01</span>, <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">SHYAM01</span>.  </p>
+<p style="margin:8px 0;line-height:1.6">Customer yeh code daal kar apni app/website <strong>us dukaan se bind</strong> kar sakta hai.</p>
+<h3 style="color:#1a1a1a;margin-top:18px">Kyon important hai? (Gaav use case)</h3>
+<p style="margin:4px 0 4px 20px">• Gaav me log aksar <strong>ek hi kirana</strong> se judte hain</p>
+<p style="margin:4px 0 4px 20px">• Shop code daalne se customer ko <strong>sirf us dukaan ke products</strong> dikhte hain</p>
+<p style="margin:4px 0 4px 20px">• Vendor apna code customer ko bol kar/share kar sakta hai</p>
+<h3 style="color:#1a1a1a;margin-top:18px">Technical flow</h3>
+<p style="margin:4px 0 4px 20px">1. <strong>Har store</strong> ke paas <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">stores.shop_code</span> column (unique, 4–12 chars)</p>
+<p style="margin:4px 0 4px 20px">2. Code format: shop name se base + number, e.g. <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">RAMU</span> + <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">01</span> = <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">RAMU01</span></p>
+<p style="margin:4px 0 4px 20px">3. Customer shop code daalta hai:</p>
+<p style="margin:8px 0;line-height:1.6">   - Login/signup: <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">POST /auth/otp/verify</span> me <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">shop_code</span></p>
+<p style="margin:8px 0;line-height:1.6">   - Ya baad me: <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">PATCH /auth/me</span> me <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">shop_code</span></p>
+<p style="margin:4px 0 4px 20px">4. Backend <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">users.preferred_store_ids</span> me us store ki ID save karta hai</p>
+<p style="margin:4px 0 4px 20px">5. Poori catalog ab <strong>filter</strong> ho jati hai</p>
+<h3 style="color:#1a1a1a;margin-top:18px">APIs</h3>
+<p style="margin:4px 0 4px 20px">• <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">GET /catalog/stores/by-code/:code</span> — code se dukaan dhundho (preview)</p>
+<p style="margin:4px 0 4px 20px">• <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">PATCH /auth/me</span> — <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">{ shop_code: "RAMU01" }</span> apply karo</p>
+<p style="margin:4px 0 4px 20px">• Shop code clear: <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">{ shop_code: null }</span> → filter hata do</p>
+<h3 style="color:#1a1a1a;margin-top:18px">Mobile screen</h3>
+<p style="margin:4px 0 4px 20px">• <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">ShopCodeScreen.tsx</span> — code enter, preview, apply, skip</p>
+<h3 style="color:#1a1a1a;margin-top:18px">Seed data shop codes</h3>
+<table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse;width:100%;margin:12px 0">
+<tr><th>Dukaan</th><th>Code</th></tr>
+<tr><td>Ramu Kirana</td><td>RAMU01</td></tr>
+<tr><td>Shyam General Store</td><td>SHYAM01</td></tr>
+</table>
+<hr style="border:none;border-top:1px solid #ddd;margin:20px 0"/>
+<h2 style="color:#111;margin-top:24px;border-bottom:2px solid #e5e7eb;padding-bottom:6px">7. Preferred Shops Filter</h2>
+<h3 style="color:#1a1a1a;margin-top:18px">Kya hai?</h3>
+<p style="margin:8px 0;line-height:1.6">Customer <strong>1 ya zyada dukaan</strong> chun sakta hai. Jab filter on ho, to:</p>
+<p style="margin:4px 0 4px 20px">• Home products</p>
+<p style="margin:4px 0 4px 20px">• Search results</p>
+<p style="margin:4px 0 4px 20px">• Category products</p>
+<p style="margin:4px 0 4px 20px">• Shop list</p>
+<p style="margin:8px 0;line-height:1.6">— sab jagah <strong>sirf chosen shops</strong> dikhte hain.</p>
+<h3 style="color:#1a1a1a;margin-top:18px">Kahan set hota hai?</h3>
+<p style="margin:4px 0 4px 20px">• Profile → "My Shops" / preferred stores</p>
+<p style="margin:4px 0 4px 20px">• Ya shop code se automatically ek shop bind</p>
+<h3 style="color:#1a1a1a;margin-top:18px">Backend</h3>
+<p style="margin:4px 0 4px 20px">• <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">users.preferred_store_ids</span> — JSON array of store UUIDs</p>
+<p style="margin:4px 0 4px 20px">• Catalog APIs automatically is filter ko respect karti hain</p>
+<p style="margin:4px 0 4px 20px">• "Show all shops" se filter hata sakte ho</p>
+<h3 style="color:#1a1a1a;margin-top:18px">UI indicator</h3>
+<p style="margin:4px 0 4px 20px">• Jab filter active ho, home par upar <strong>saaf message</strong> dikhta hai ki ab sirf X dukaan dikhegi</p>
+<hr style="border:none;border-top:1px solid #ddd;margin:20px 0"/>
+<h2 style="color:#111;margin-top:24px;border-bottom:2px solid #e5e7eb;padding-bottom:6px">8. Browse Flow: Category → Shops → Products</h2>
+<p style="margin:8px 0;line-height:1.6">Yeh Zero ka <strong>signature customer flow</strong> hai (web + mobile dono me same):</p>
+<p style="font-family:Consolas,monospace;font-size:10pt;background:#f8f9fa;border:1px solid #e5e7eb;padding:10px;margin:10px 0;line-height:1.5">
+Home<br/>
+  └── Category (e.g. Kirana, Sabzi)<br/>
+        └── Shops list (aas-paas ki dukaanein, distance ke saath)<br/>
+              └── Shop page (us dukaan ke products + banners)<br/>
+                    └── Product detail<br/>
+                          └── Add to cart / Chat with shop<br/>
+</p>
+<h3 style="color:#1a1a1a;margin-top:18px">Category page</h3>
+<p style="margin:4px 0 4px 20px">• Category ke andar <strong>shops</strong> dikhti hain jo us category me products rakhti hain</p>
+<p style="margin:4px 0 4px 20px">• GPS on ho to <strong>distance (km)</strong> sort ke saath</p>
+<h3 style="color:#1a1a1a;margin-top:18px">Shop page</h3>
+<p style="margin:4px 0 4px 20px">• Dukaan ka naam, phone, WhatsApp</p>
+<p style="margin:4px 0 4px 20px">• Us shop ke <strong>banners</strong> (vendor ne banaye)</p>
+<p style="margin:4px 0 4px 20px">• Us shop ke <strong>products</strong> grid</p>
+<h3 style="color:#1a1a1a;margin-top:18px">Product detail</h3>
+<p style="margin:4px 0 4px 20px">• Naam (selected language me)</p>
+<p style="margin:4px 0 4px 20px">• Price = base price + extra charge (agar hai)</p>
+<p style="margin:4px 0 4px 20px">• MRP, stock status</p>
+<p style="margin:4px 0 4px 20px">• Add to cart</p>
+<p style="margin:4px 0 4px 20px">• <strong>"दुकान से बात करें"</strong> — chat shuru karo</p>
+<hr style="border:none;border-top:1px solid #ddd;margin:20px 0"/>
+<h2 style="color:#111;margin-top:24px;border-bottom:2px solid #e5e7eb;padding-bottom:6px">9. Order Process (Direct Order)</h2>
+<h3 style="color:#1a1a1a;margin-top:18px">Cart rules</h3>
+<p style="margin:4px 0 4px 20px">• Ek cart = <strong>ek hi shop</strong> ke items</p>
+<p style="margin:4px 0 4px 20px">• Dusri shop ka product add karoge to warning / cart clear</p>
+<h3 style="color:#1a1a1a;margin-top:18px">Checkout steps</h3>
+<p style="margin:4px 0 4px 20px">1. <strong>Delivery address</strong> choose/add karo (pincode serviceability check)</p>
+<p style="margin:4px 0 4px 20px">2. <strong>Payment method</strong>: COD ya Online (UPI via PayU)</p>
+<p style="margin:4px 0 4px 20px">3. Order summary: items + delivery fee + penalty (agar pending) + total</p>
+<p style="margin:4px 0 4px 20px">4. Place order</p>
+<h3 style="color:#1a1a1a;margin-top:18px">Order statuses (lifecycle)</h3>
+<p style="font-family:Consolas,monospace;font-size:10pt;background:#f8f9fa;border:1px solid #e5e7eb;padding:10px;margin:10px 0;line-height:1.5">
+placed → confirmed → preparing → ready_for_pickup<br/>
+    → assigned → out_for_delivery → delivered<br/>
+<br/>
+(cancelled — kisi bhi stage par possible, rules ke saath)<br/>
+</p>
+<h3 style="color:#1a1a1a;margin-top:18px">Vendor side</h3>
+<p style="margin:4px 0 4px 20px">• Naya order aata hai → <strong>Accept / Reject</strong></p>
+<p style="margin:4px 0 4px 20px">• Accept ke baad: preparing → ready_for_pickup</p>
+<p style="margin:4px 0 4px 20px">• Ready par <strong>delivery boy assign</strong> karo</p>
+<h3 style="color:#1a1a1a;margin-top:18px">Customer side</h3>
+<p style="margin:4px 0 4px 20px">• Orders list me status dikhta hai</p>
+<p style="margin:4px 0 4px 20px">• WhatsApp par order confirm bhejne ka option (mobile)</p>
+<hr style="border:none;border-top:1px solid #ddd;margin:20px 0"/>
+<h2 style="color:#111;margin-top:24px;border-bottom:2px solid #e5e7eb;padding-bottom:6px">10. Broadcast Request Flow</h2>
+<p style="margin:8px 0;line-height:1.6">Jab customer ko product nahi milta:</p>
+<p style="font-family:Consolas,monospace;font-size:10pt;background:#f8f9fa;border:1px solid #e5e7eb;padding:10px;margin:10px 0;line-height:1.5">
+"📢 Sab dukaanon se pucho" / "Ask nearby shops"<br/>
+    → Customer likhta/bolta hai kya chahiye<br/>
+    → Request sab nearby vendors ko jati hai<br/>
+    → Jo vendor accept kare, offer bhejta hai<br/>
+    → Customer offer accept kare → order ban jata hai<br/>
+</p>
+<h3 style="color:#1a1a1a;margin-top:18px">Statuses</h3>
+<p style="margin:4px 0 4px 20px">• <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">pending</span> — shops ko notify ho raha hai</p>
+<p style="margin:4px 0 4px 20px">• <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">matched</span> — kisi shop ne accept kiya</p>
+<p style="margin:4px 0 4px 20px">• <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">confirmed</span> — customer ne confirm kiya → order</p>
+<p style="margin:4px 0 4px 20px">• <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">cancelled</span> / <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">expired</span></p>
+<h3 style="color:#1a1a1a;margin-top:18px">Screens</h3>
+<p style="margin:4px 0 4px 20px">• Web: <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">OpenRequest.tsx</span>, <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">OpenRequestTrack.tsx</span></p>
+<p style="margin:4px 0 4px 20px">• Mobile: <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">OpenRequestScreen.tsx</span></p>
+<hr style="border:none;border-top:1px solid #ddd;margin:20px 0"/>
+<h2 style="color:#111;margin-top:24px;border-bottom:2px solid #e5e7eb;padding-bottom:6px">11. Payment &amp; Delivery</h2>
+<h3 style="color:#1a1a1a;margin-top:18px">Payment methods</h3>
+<table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse;width:100%;margin:12px 0">
+<tr><th>Method</th><th>Status</th></tr>
+<tr><td><strong>COD</strong> (Cash on Delivery)</td><td>✅ Working</td></tr>
+<tr><td><strong>Online UPI</strong> (PayU)</td><td>⏳ Test mode / dev bypass</td></tr>
+</table>
+<h3 style="color:#1a1a1a;margin-top:18px">Delivery charge</h3>
+<p style="margin:4px 0 4px 20px">• Abhi <strong>fixed</strong> region-based charge (e.g. ₹20)</p>
+<p style="margin:4px 0 4px 20px">• Free delivery above threshold (e.g. ₹299+)</p>
+<p style="margin:4px 0 4px 20px">• Min order value (e.g. ₹99)</p>
+<p style="margin:4px 0 4px 20px">• <strong>Map-based dynamic charge</strong> — future (V3)</p>
+<h3 style="color:#1a1a1a;margin-top:18px">Delivery assignment</h3>
+<p style="margin:4px 0 4px 20px">• Vendor apne <strong>delivery boys</strong> khud add karta hai</p>
+<p style="margin:4px 0 4px 20px">• Order <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">ready_for_pickup</span> par boy assign hota hai</p>
+<p style="margin:4px 0 4px 20px">• Delivery boy app me order dikhta hai → pickup → deliver → mark delivered</p>
+<hr style="border:none;border-top:1px solid #ddd;margin:20px 0"/>
+<h2 style="color:#111;margin-top:24px;border-bottom:2px solid #e5e7eb;padding-bottom:6px">12. Cancellation Penalty (₹10)</h2>
+<h3 style="color:#1a1a1a;margin-top:18px">Rule</h3>
+<p style="margin:8px 0;line-height:1.6">Agar customer ne order <strong>processing me jaane ke baad</strong> cancel kiya (placed ke baad — confirmed/preparing/etc.), to:</p>
+<p style="margin:4px 0 4px 20px">• Uske <strong>agle ek order</strong> par <strong>₹10 extra penalty</strong> lagti hai</p>
+<p style="margin:4px 0 4px 20px">• Ek baar lagne ke baad clear ho jati hai</p>
+<h3 style="color:#1a1a1a;margin-top:18px">UI</h3>
+<p style="margin:4px 0 4px 20px">• Cart aur checkout par <strong>saaf warning</strong> dikhti hai agar penalty pending ho</p>
+<hr style="border:none;border-top:1px solid #ddd;margin:20px 0"/>
+<h2 style="color:#111;margin-top:24px;border-bottom:2px solid #e5e7eb;padding-bottom:6px">13. Vendor Complete Journey</h2>
+<h3 style="color:#1a1a1a;margin-top:18px">Vendor ka din (typical flow)</h3>
+<p style="font-family:Consolas,monospace;font-size:10pt;background:#f8f9fa;border:1px solid #e5e7eb;padding:10px;margin:10px 0;line-height:1.5">
+Member Login (mobile) / Web login (admin panel)<br/>
+    → Dashboard: aaj ke orders, sales, payout<br/>
+    → Orders dekho → Accept/Reject<br/>
+    → Preparing mark karo → Ready for pickup<br/>
+    → Delivery boy assign karo<br/>
+    → Products add/edit karo<br/>
+    → Banner banao (shop page / home ke liye request)<br/>
+    → Notice likho (website ticker me dikhega)<br/>
+    → Customer chats dekho → reply karo (text/voice)<br/>
+</p>
+<h3 style="color:#1a1a1a;margin-top:18px">Vendor mobile screens</h3>
+<table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse;width:100%;margin:12px 0">
+<tr><th>Screen</th><th>Kaam</th></tr>
+<tr><td>VendorHome</td><td>Dashboard, quick buttons</td></tr>
+<tr><td>VendorOrderDetail</td><td>Order accept, status update, assign boy</td></tr>
+<tr><td>VendorProducts</td><td>Product list</td></tr>
+<tr><td>VendorProductForm</td><td>Add/edit product (en/hi/mr naam, price, stock, photo)</td></tr>
+<tr><td>VendorBanners</td><td>Shop/home banners</td></tr>
+<tr><td>VendorNotices</td><td>Scrolling notices for website</td></tr>
+<tr><td>VendorDeliveryBoys</td><td>Apne delivery boys manage</td></tr>
+<tr><td>VendorChats</td><td>Customer chats list</td></tr>
+<tr><td>VendorChat (ChatScreen)</td><td>Individual chat reply</td></tr>
+</table>
+<h3 style="color:#1a1a1a;margin-top:18px">Vendor web panel (<span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">apps/admin</span> — role vendor)</h3>
+<p style="margin:4px 0 4px 20px">• My Shop dashboard</p>
+<p style="margin:4px 0 4px 20px">• Products CRUD</p>
+<p style="margin:4px 0 4px 20px">• Orders management</p>
+<p style="margin:4px 0 4px 20px">• Banners</p>
+<p style="margin:4px 0 4px 20px">• Delivery boys</p>
+<p style="margin:4px 0 4px 20px">• Commission / payout summary</p>
+<h3 style="color:#1a1a1a;margin-top:18px">Product fields (vendor add karte waqt)</h3>
+<p style="margin:4px 0 4px 20px">• Name: English, Hindi, Marwadi</p>
+<p style="margin:4px 0 4px 20px">• Price, MRP, extra charge</p>
+<p style="margin:4px 0 4px 20px">• Stock quantity</p>
+<p style="margin:4px 0 4px 20px">• Category</p>
+<p style="margin:4px 0 4px 20px">• Image (URL / upload web se)</p>
+<p style="margin:4px 0 4px 20px">• Active/inactive</p>
+<h3 style="color:#1a1a1a;margin-top:18px">Banner system</h3>
+<table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse;width:100%;margin:12px 0">
+<tr><th>Placement</th><th>Approval</th></tr>
+<tr><td><strong>Shop page</strong></td><td>Auto-approved — turant dikhta hai</td></tr>
+<tr><td><strong>Home page</strong></td><td>Admin approval chahiye — pending → approved/rejected</td></tr>
+</table>
+<hr style="border:none;border-top:1px solid #ddd;margin:20px 0"/>
+<h2 style="color:#111;margin-top:24px;border-bottom:2px solid #e5e7eb;padding-bottom:6px">14. Vendor Scrolling Notices</h2>
+<h3 style="color:#1a1a1a;margin-top:18px">Kya hai?</h3>
+<p style="margin:8px 0;line-height:1.6">Vendor apni dukaan ki <strong>chhoti khabrein / offers</strong> likh sakta hai jo <strong>customer website</strong> par scrolling ticker me dikhti hain.</p>
+<h3 style="color:#1a1a1a;margin-top:18px">Example notices</h3>
+<p style="margin:4px 0 4px 20px">• "Aaj tamatar saste hain!"</p>
+<p style="margin:4px 0 4px 20px">• "Kal band rahegi dukaan"</p>
+<p style="margin:4px 0 4px 20px">• "Naya stock aaya — basmati chawal"</p>
+<h3 style="color:#1a1a1a;margin-top:18px">Flow</h3>
+<p style="margin:4px 0 4px 20px">1. Vendor mobile/web se notice create karta hai (Hindi/English/Marwadi message)</p>
+<p style="margin:4px 0 4px 20px">2. <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">vendor_notices</span> table me save</p>
+<p style="margin:4px 0 4px 20px">3. Website par:</p>
+<p style="margin:8px 0;line-height:1.6">   - <strong>Desktop</strong>: right sidebar me scrolling ticker (<span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">VendorTicker</span>)</p>
+<p style="margin:8px 0;line-height:1.6">   - <strong>Mobile web</strong>: floating <strong>"📣 दुकान की खबर"</strong> button → bottom sheet</p>
+<h3 style="color:#1a1a1a;margin-top:18px">APIs</h3>
+<p style="margin:4px 0 4px 20px">• Public: <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">GET /catalog/notices</span> — active notices (preferred shop filter respect)</p>
+<p style="margin:4px 0 4px 20px">• Vendor: <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">GET/POST/PUT/DELETE /vendor/notices</span></p>
+<h3 style="color:#1a1a1a;margin-top:18px">Database</h3>
+<p style="margin:4px 0 4px 20px">• Table: <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">vendor_notices</span> (store_id, message JSONB, is_active)</p>
+<hr style="border:none;border-top:1px solid #ddd;margin:20px 0"/>
+<h2 style="color:#111;margin-top:24px;border-bottom:2px solid #e5e7eb;padding-bottom:6px">15. Product Chat (Customer ↔ Vendor)</h2>
+<h3 style="color:#1a1a1a;margin-top:18px">Concept</h3>
+<p style="margin:8px 0;line-height:1.6">Har <strong>product</strong> par customer us product ki <strong>dukaan ke vendor</strong> se baat kar sakta hai.  </p>
+<p style="margin:8px 0;line-height:1.6">Chat <strong>product-specific</strong> hai — ek customer + ek product = ek chat thread.</p>
+<h3 style="color:#1a1a1a;margin-top:18px">Kyon?</h3>
+<p style="margin:4px 0 4px 20px">• "Yeh item available hai?"</p>
+<p style="margin:4px 0 4px 20px">• "Delivery kitne baje tak?"</p>
+<p style="margin:4px 0 4px 20px">• "Thoda discount milega?"</p>
+<p style="margin:4px 0 4px 20px">• Gaav ke log call ki jagah chat prefer kar sakte hain</p>
+<h3 style="color:#1a1a1a;margin-top:18px">Security</h3>
+<p style="margin:4px 0 4px 20px">• Sirf <strong>chat ke participants</strong> access kar sakte hain:</p>
+<p style="margin:8px 0;line-height:1.6">  - Customer jisne chat kholi</p>
+<p style="margin:8px 0;line-height:1.6">  - Us product ke store ka vendor</p>
+<p style="margin:4px 0 4px 20px">• Koi teesra user chat nahi dekh sakta</p>
+<h3 style="color:#1a1a1a;margin-top:18px">Flow</h3>
+<p style="font-family:Consolas,monospace;font-size:10pt;background:#f8f9fa;border:1px solid #e5e7eb;padding:10px;margin:10px 0;line-height:1.5">
+Product detail → "दुकान से बात करें"<br/>
+    → POST /chats { product_id }<br/>
+    → Chat screen khulta hai<br/>
+    → WebSocket se real-time messages<br/>
+    → History on-demand load (pagination)<br/>
+</p>
+<h3 style="color:#1a1a1a;margin-top:18px">Message types</h3>
+<table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse;width:100%;margin:12px 0">
+<tr><th>Type</th><th>Description</th></tr>
+<tr><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">text</span></td><td>Normal text message (max 2000 chars)</td></tr>
+<tr><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">voice</span></td><td>Audio recording (upload + play)</td></tr>
+</table>
+<h3 style="color:#1a1a1a;margin-top:18px">Real-time (WebSocket)</h3>
+<p style="margin:4px 0 4px 20px">• Socket.io same server par (<span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">/socket.io</span>)</p>
+<p style="margin:4px 0 4px 20px">• JWT token se authenticate</p>
+<p style="margin:4px 0 4px 20px">• Events: <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">chat:join</span>, <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">chat:leave</span>, <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">chat:send</span>, <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">chat:new_message</span></p>
+<h3 style="color:#1a1a1a;margin-top:18px">REST fallback (jab socket na ho)</h3>
+<p style="margin:4px 0 4px 20px">• <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">POST /chats/:id/messages</span> — text ya voice bhejo</p>
+<h3 style="color:#1a1a1a;margin-top:18px">Chat list</h3>
+<p style="margin:4px 0 4px 20px">• Customer: apni saari product chats</p>
+<p style="margin:4px 0 4px 20px">• Vendor: apni dukaan ki saari customer chats (<span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">VendorChats</span> screen)</p>
+<h3 style="color:#1a1a1a;margin-top:18px">Database</h3>
+<p style="margin:4px 0 4px 20px">• <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">product_chats</span> — (product_id, store_id, customer_user_id) unique</p>
+<p style="margin:4px 0 4px 20px">• <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">product_chat_messages</span> — (chat_id, sender_user_id, body, message_type, audio_url, created_at)</p>
+<hr style="border:none;border-top:1px solid #ddd;margin:20px 0"/>
+<h2 style="color:#111;margin-top:24px;border-bottom:2px solid #e5e7eb;padding-bottom:6px">16. Voice Messages in Chat</h2>
+<h3 style="color:#1a1a1a;margin-top:18px">User experience</h3>
+<p style="margin:4px 0 4px 20px">1. Chat screen me <strong>🎤 mic button</strong> dikhta hai</p>
+<p style="margin:4px 0 4px 20px">2. Tap → recording shuru</p>
+<p style="margin:4px 0 4px 20px">3. Dubara tap (⏹) → recording stop + upload + send</p>
+<p style="margin:4px 0 4px 20px">4. Samne wale ko <strong>audio player</strong> dikhta hai — sun sakte hain</p>
+<h3 style="color:#1a1a1a;margin-top:18px">Technical flow</h3>
+<p style="font-family:Consolas,monospace;font-size:10pt;background:#f8f9fa;border:1px solid #e5e7eb;padding:10px;margin:10px 0;line-height:1.5">
+User records audio<br/>
+    → POST /uploads/voice (multipart file, max 5MB)<br/>
+    → Server saves: /uploads/voice-&lt;timestamp&gt;.webm<br/>
+    → Returns: { path: "/uploads/voice-xxx.webm" }<br/>
+    → Socket emit: chat:send { chatId, message_type: "voice", audio_url }<br/>
+    → DB save + broadcast chat:new_message<br/>
+    → Receiver plays via &lt;audio controls&gt; (web) or player (mobile)<br/>
+</p>
+<h3 style="color:#1a1a1a;margin-top:18px">Supported audio formats</h3>
+<p style="margin:4px 0 4px 20px">• webm, mp4, m4a, wav, ogg, aac (browser/device dependent)</p>
+<h3 style="color:#1a1a1a;margin-top:18px">Permissions</h3>
+<p style="margin:4px 0 4px 20px">• Web: browser microphone permission</p>
+<p style="margin:4px 0 4px 20px">• Mobile: <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">RECORD_AUDIO</span> (Android) + <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">NSMicrophoneUsageDescription</span> (iOS)</p>
+<h3 style="color:#1a1a1a;margin-top:18px">Platforms</h3>
+<table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse;width:100%;margin:12px 0">
+<tr><th>Platform</th><th>Component</th></tr>
+<tr><td>Web</td><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">VoiceRecordButton.tsx</span> + <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">ChatMessageBody.tsx</span></td></tr>
+<tr><td>Mobile</td><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">VoiceChatRecorder.tsx</span> + <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">VoiceMessagePlayer.tsx</span></td></tr>
+</table>
+<hr style="border:none;border-top:1px solid #ddd;margin:20px 0"/>
+<h2 style="color:#111;margin-top:24px;border-bottom:2px solid #e5e7eb;padding-bottom:6px">17. Delivery Boy Process</h2>
+<h3 style="color:#1a1a1a;margin-top:18px">Setup (vendor karta hai)</h3>
+<p style="margin:4px 0 4px 20px">1. Vendor <strong>Delivery Boys</strong> screen se boy add karta hai</p>
+<p style="margin:4px 0 4px 20px">2. Boy ka phone number register hota hai (role = <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">delivery_boy</span>)</p>
+<p style="margin:4px 0 4px 20px">3. Boy <strong>Member Login</strong> se mobile app me aata hai</p>
+<h3 style="color:#1a1a1a;margin-top:18px">Daily flow</h3>
+<p style="font-family:Consolas,monospace;font-size:10pt;background:#f8f9fa;border:1px solid #e5e7eb;padding:10px;margin:10px 0;line-height:1.5">
+Member Login → Delivery Home<br/>
+    → Assigned orders list<br/>
+    → Order detail → Navigate / Call customer<br/>
+    → Mark picked up → Out for delivery → Delivered<br/>
+    → Earnings screen<br/>
+</p>
+<h3 style="color:#1a1a1a;margin-top:18px">Assignment</h3>
+<p style="margin:4px 0 4px 20px">• Vendor order <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">ready_for_pickup</span> par boy choose karta hai</p>
+<p style="margin:4px 0 4px 20px">• <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">POST /vendor/orders/:id/assign</span> { delivery_boy_id }</p>
+<p style="margin:4px 0 4px 20px">• Boy ki availability: online/offline</p>
+<hr style="border:none;border-top:1px solid #ddd;margin:20px 0"/>
+<h2 style="color:#111;margin-top:24px;border-bottom:2px solid #e5e7eb;padding-bottom:6px">18. Admin Panel Process</h2>
+<h3 style="color:#1a1a1a;margin-top:18px">Admin kya karta hai (<span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">apps/admin</span>)</h3>
+<table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse;width:100%;margin:12px 0">
+<tr><th>Section</th><th>Kaam</th></tr>
+<tr><td>Dashboard</td><td>Commission, payouts, shop-wise breakdown</td></tr>
+<tr><td>Stores</td><td>Dukaan add/edit, lat/lng, commission rate, shop code</td></tr>
+<tr><td>Categories</td><td>Category manage (en/hi/mr)</td></tr>
+<tr><td>Products</td><td>Kisi bhi shop ke liye product add (shop select)</td></tr>
+<tr><td>Orders</td><td>Saare orders dekho</td></tr>
+<tr><td>Banners</td><td>Home banners approve/reject, push to home</td></tr>
+<tr><td>Users</td><td>User management</td></tr>
+</table>
+<h3 style="color:#1a1a1a;margin-top:18px">Admin vendor ke liye product</h3>
+<p style="margin:4px 0 4px 20px">• Admin product form me <strong>"Shop chuno"</strong> field</p>
+<p style="margin:4px 0 4px 20px">• Kisi bhi vendor ki taraf se product daal sakta hai</p>
+<h3 style="color:#1a1a1a;margin-top:18px">Banner approval</h3>
+<p style="margin:4px 0 4px 20px">• Vendor home banner request karta hai → status <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">pending</span></p>
+<p style="margin:4px 0 4px 20px">• Admin approve/reject karta hai</p>
+<p style="margin:4px 0 4px 20px">• Admin kisi banner ko manually <strong>"Push to home"</strong> bhi kar sakta hai</p>
+<hr style="border:none;border-top:1px solid #ddd;margin:20px 0"/>
+<h2 style="color:#111;margin-top:24px;border-bottom:2px solid #e5e7eb;padding-bottom:6px">19. Commission &amp; Payouts</h2>
+<h3 style="color:#1a1a1a;margin-top:18px">Calculation</h3>
+<p style="margin:4px 0 4px 20px">• Har store par <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">commission_rate</span> % set hai</p>
+<p style="margin:4px 0 4px 20px">• Order complete hone par:</p>
+<p style="margin:8px 0;line-height:1.6">  - <strong>Gross</strong> = order total</p>
+<p style="margin:8px 0;line-height:1.6">  - <strong>Commission</strong> = Zero ka hissa</p>
+<p style="margin:8px 0;line-height:1.6">  - <strong>Vendor payout</strong> = gross - commission - delivery adjustments</p>
+<h3 style="color:#1a1a1a;margin-top:18px">Dashboards</h3>
+<p style="margin:4px 0 4px 20px">• <strong>Admin</strong>: total platform commission, per-shop breakdown, vendor payouts due</p>
+<p style="margin:4px 0 4px 20px">• <strong>Vendor</strong>: total sales, your payout, is mahine ki kamai</p>
+<hr style="border:none;border-top:1px solid #ddd;margin:20px 0"/>
+<h2 style="color:#111;margin-top:24px;border-bottom:2px solid #e5e7eb;padding-bottom:6px">20. Website (Customer) — Screens &amp; Features</h2>
+<h3 style="color:#1a1a1a;margin-top:18px">Layout (redesigned)</h3>
+<p style="margin:4px 0 4px 20px">• Professional full-width layout (purana narrow phone shell hata diya)</p>
+<p style="margin:4px 0 4px 20px">• Top navigation bar</p>
+<p style="margin:4px 0 4px 20px">• Main content ~720px</p>
+<p style="margin:4px 0 4px 20px">• <strong>Right sidebar</strong>: vendor notices ticker (desktop)</p>
+<p style="margin:4px 0 4px 20px">• Mobile: bottom nav + floating notices button</p>
+<h3 style="color:#1a1a1a;margin-top:18px">Pages (<span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">apps/web/src/pages/</span>)</h3>
+<table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse;width:100%;margin:12px 0">
+<tr><th>Route</th><th>Page</th><th>Feature</th></tr>
+<tr><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">/</span></td><td>Home</td><td>Banners, categories, products, voice search</td></tr>
+<tr><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">/category/:slug</span></td><td>Category</td><td>Shops in category</td></tr>
+<tr><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">/shop/:id</span></td><td>Shop</td><td>Shop products + banners</td></tr>
+<tr><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">/search</span></td><td>Search</td><td>Text + voice search, URL sync</td></tr>
+<tr><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">/product/:id</span></td><td>Product</td><td>Detail, add cart, chat button</td></tr>
+<tr><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">/cart</span></td><td>Cart</td><td>Single-shop cart</td></tr>
+<tr><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">/checkout</span></td><td>Checkout</td><td>Address, payment, penalty warning</td></tr>
+<tr><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">/orders</span></td><td>Orders</td><td>Order history + status</td></tr>
+<tr><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">/profile</span></td><td>Profile</td><td>Language, preferred shops, shop code</td></tr>
+<tr><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">/login</span></td><td>Login</td><td>OTP login</td></tr>
+<tr><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">/request</span></td><td>OpenRequest</td><td>Broadcast request</td></tr>
+<tr><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">/request/:id</span></td><td>OpenRequestTrack</td><td>Track request</td></tr>
+<tr><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">/chat/:id</span></td><td>Chat</td><td>Text + voice chat</td></tr>
+</table>
+<h3 style="color:#1a1a1a;margin-top:18px">Search fix</h3>
+<p style="margin:4px 0 4px 20px">• Dedicated Search button</p>
+<p style="margin:4px 0 4px 20px">• URL query sync (<span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">?q=...</span>)</p>
+<p style="margin:4px 0 4px 20px">• Backend broad search: slug, Hindi, Marwadi, description</p>
+<hr style="border:none;border-top:1px solid #ddd;margin:20px 0"/>
+<h2 style="color:#111;margin-top:24px;border-bottom:2px solid #e5e7eb;padding-bottom:6px">21. Mobile App — Screens &amp; Features</h2>
+<h3 style="color:#1a1a1a;margin-top:18px">Navigation structure</h3>
+<p style="font-family:Consolas,monospace;font-size:10pt;background:#f8f9fa;border:1px solid #e5e7eb;padding:10px;margin:10px 0;line-height:1.5">
+App start<br/>
+├── Not logged in → LoginScreen → OtpScreen<br/>
+│       └── [Optional] ShopCodeScreen<br/>
+├── Customer → CustomerTabs (Home, Orders, Profile)<br/>
+│       └── Stack: Category, Shop, Product, Cart, Checkout, Chat...<br/>
+├── Vendor → VendorStack (VendorHome, Orders, Products, Chats...)<br/>
+└── Delivery → DeliveryStack (DeliveryHome, OrderDetail, Earnings)<br/>
+</p>
+<h3 style="color:#1a1a1a;margin-top:18px">Customer screens</h3>
+<p style="margin:4px 0 4px 20px">• HomeScreen, CategoryScreen, CategoryProductsScreen</p>
+<p style="margin:4px 0 4px 20px">• ShopScreen, ProductDetailScreen</p>
+<p style="margin:4px 0 4px 20px">• CartScreen, CheckoutScreen, PaymentScreen</p>
+<p style="margin:4px 0 4px 20px">• OrdersScreen, ProfileScreen, ShopCodeScreen</p>
+<p style="margin:4px 0 4px 20px">• ChatScreen, OpenRequestScreen</p>
+<h3 style="color:#1a1a1a;margin-top:18px">Login types</h3>
+<p style="margin:4px 0 4px 20px">• <strong>Customer</strong>: normal OTP login</p>
+<p style="margin:4px 0 4px 20px">• <strong>Member Login</strong>: vendor/delivery/admin staff</p>
+<h3 style="color:#1a1a1a;margin-top:18px">Single app philosophy</h3>
+<p style="margin:4px 0 4px 20px">• Ek hi APK/IPA — role ke hisaab se UI badalta hai</p>
+<p style="margin:4px 0 4px 20px">• Vendor ke liye alag app nahi banaya</p>
+<hr style="border:none;border-top:1px solid #ddd;margin:20px 0"/>
+<h2 style="color:#111;margin-top:24px;border-bottom:2px solid #e5e7eb;padding-bottom:6px">22. Languages &amp; Voice Search</h2>
+<h3 style="color:#1a1a1a;margin-top:18px">Supported languages</h3>
+<table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse;width:100%;margin:12px 0">
+<tr><th>Code</th><th>Language</th></tr>
+<tr><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">en</span></td><td>English</td></tr>
+<tr><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">hi</span></td><td>Hindi (default web)</td></tr>
+<tr><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">mr</span></td><td>Marwadi</td></tr>
+</table>
+<h3 style="color:#1a1a1a;margin-top:18px">Kahan translate hota hai</h3>
+<p style="margin:4px 0 4px 20px">• Frontend UI strings (i18next)</p>
+<p style="margin:4px 0 4px 20px">• Product/category names (DB me en/hi/mr fields)</p>
+<p style="margin:4px 0 4px 20px">• Backend error messages (i18n JSON)</p>
+<p style="margin:4px 0 4px 20px">• Vendor notices (multi-lang JSON message)</p>
+<h3 style="color:#1a1a1a;margin-top:18px">Voice search</h3>
+<p style="margin:4px 0 4px 20px">• Browser/device mic se bol kar search</p>
+<p style="margin:4px 0 4px 20px">• Marwadi me bolne par Hindi voice fallback</p>
+<p style="margin:4px 0 4px 20px">• Search results me Marwadi product names bhi match hote hain</p>
+<hr style="border:none;border-top:1px solid #ddd;margin:20px 0"/>
+<h2 style="color:#111;margin-top:24px;border-bottom:2px solid #e5e7eb;padding-bottom:6px">23. Location &amp; Nearby Shops</h2>
+<h3 style="color:#1a1a1a;margin-top:18px">Bina paid map API ke</h3>
+<p style="margin:4px 0 4px 20px">• Website: <strong>"📍 मेरी जगह इस्तेमाल करें"</strong> button</p>
+<p style="margin:4px 0 4px 20px">• Browser GPS se lat/lng</p>
+<p style="margin:4px 0 4px 20px">• Backend <strong>Haversine formula</strong> se distance calculate</p>
+<p style="margin:4px 0 4px 20px">• Shops <strong>km ke hisaab se sort</strong> — har shop par "X कि.मी." dikhta hai</p>
+<h3 style="color:#1a1a1a;margin-top:18px">API</h3>
+<p style="margin:4px 0 4px 20px">• <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">GET /catalog/stores?lat=&amp;lng=</span> — distance sorted shops</p>
+<h3 style="color:#1a1a1a;margin-top:18px">Requirement</h3>
+<p style="margin:4px 0 4px 20px">• Shop ka <strong>latitude/longitude</strong> admin/seed me hona chahiye</p>
+<p style="margin:4px 0 4px 20px">• Bina coords wali shops list me peeche rehti hain</p>
+<h3 style="color:#1a1a1a;margin-top:18px">Future (V3)</h3>
+<p style="margin:4px 0 4px 20px">• Google Maps API — address autocomplete, map picker</p>
+<p style="margin:4px 0 4px 20px">• Location-based dynamic delivery charge</p>
+<hr style="border:none;border-top:1px solid #ddd;margin:20px 0"/>
+<h2 style="color:#111;margin-top:24px;border-bottom:2px solid #e5e7eb;padding-bottom:6px">24. Database Tables (Summary)</h2>
+<h3 style="color:#1a1a1a;margin-top:18px">Core tables</h3>
+<table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse;width:100%;margin:12px 0">
+<tr><th>Table</th><th>Purpose</th></tr>
+<tr><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">users</span></td><td>Sab users (customer, vendor, admin, delivery)</td></tr>
+<tr><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">stores</span></td><td>Dukaan info, shop_code, commission, lat/lng</td></tr>
+<tr><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">products</span></td><td>Products (multi-lang names, price, stock)</td></tr>
+<tr><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">categories</span></td><td>Product categories</td></tr>
+<tr><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">orders</span> / <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">order_items</span></td><td>Orders</td></tr>
+<tr><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">cart_items</span></td><td>Shopping cart</td></tr>
+<tr><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">addresses</span></td><td>Customer delivery addresses</td></tr>
+<tr><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">banners</span></td><td>Shop/home advertisements</td></tr>
+<tr><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">vendor_notices</span></td><td>Scrolling shop updates</td></tr>
+<tr><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">product_chats</span> / <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">product_chat_messages</span></td><td>Product chat + voice</td></tr>
+<tr><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">delivery_boys</span></td><td>Vendor ke delivery staff</td></tr>
+<tr><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">open_requests</span></td><td>Broadcast requests</td></tr>
+<tr><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">regions</span> / <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">region_pricing</span></td><td>Delivery pricing per region</td></tr>
+<tr><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">refresh_tokens</span> / <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">otp_codes</span></td><td>Auth</td></tr>
+</table>
+<h3 style="color:#1a1a1a;margin-top:18px">Key migrations (order)</h3>
+<p style="margin:4px 0 4px 20px">1. <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">000000</span> — init (users, products, orders...)</p>
+<p style="margin:4px 0 4px 20px">2. <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">000004</span> — marketplace (stores, multi-vendor)</p>
+<p style="margin:4px 0 4px 20px">3. <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">000005</span> — preferred_store_ids on users</p>
+<p style="margin:4px 0 4px 20px">4. <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">000006</span> — extra charge + cancellation penalty</p>
+<p style="margin:4px 0 4px 20px">5. <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">000007</span> — vendor banners</p>
+<p style="margin:4px 0 4px 20px">6. <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">000008</span> — shop codes</p>
+<p style="margin:4px 0 4px 20px">7. <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">000009</span> — vendor notices</p>
+<p style="margin:4px 0 4px 20px">8. <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">000010</span> — product chats</p>
+<p style="margin:4px 0 4px 20px">9. <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">000011</span> — chat voice messages</p>
+<hr style="border:none;border-top:1px solid #ddd;margin:20px 0"/>
+<h2 style="color:#111;margin-top:24px;border-bottom:2px solid #e5e7eb;padding-bottom:6px">25. API Endpoints (Summary)</h2>
+<p style="margin:8px 0;line-height:1.6">Base URL: <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">http://localhost:4000/api/v1</span></p>
+<h3 style="color:#1a1a1a;margin-top:18px">Auth</h3>
+<table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse;width:100%;margin:12px 0">
+<tr><th>Method</th><th>Path</th><th>Description</th></tr>
+<tr><td>POST</td><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">/auth/otp/request</span></td><td>OTP bhejo</td></tr>
+<tr><td>POST</td><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">/auth/otp/verify</span></td><td>Login/signup</td></tr>
+<tr><td>GET</td><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">/auth/me</span></td><td>Current user</td></tr>
+<tr><td>PATCH</td><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">/auth/me</span></td><td>Profile update, shop_code, preferred stores</td></tr>
+</table>
+<h3 style="color:#1a1a1a;margin-top:18px">Catalog (public + auth)</h3>
+<table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse;width:100%;margin:12px 0">
+<tr><th>Method</th><th>Path</th><th>Description</th></tr>
+<tr><td>GET</td><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">/catalog/home</span></td><td>Home data</td></tr>
+<tr><td>GET</td><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">/catalog/categories</span></td><td>Categories</td></tr>
+<tr><td>GET</td><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">/catalog/products</span></td><td>Products (search, filter)</td></tr>
+<tr><td>GET</td><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">/catalog/stores</span></td><td>Shops list (lat/lng sort)</td></tr>
+<tr><td>GET</td><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">/catalog/stores/:id</span></td><td>Shop detail</td></tr>
+<tr><td>GET</td><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">/catalog/stores/by-code/:code</span></td><td>Shop by code</td></tr>
+<tr><td>GET</td><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">/catalog/notices</span></td><td>Vendor scrolling notices</td></tr>
+</table>
+<h3 style="color:#1a1a1a;margin-top:18px">Cart &amp; Orders</h3>
+<table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse;width:100%;margin:12px 0">
+<tr><th>Method</th><th>Path</th><th>Description</th></tr>
+<tr><td>GET/POST</td><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">/cart</span></td><td>Cart operations</td></tr>
+<tr><td>POST</td><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">/orders</span></td><td>Place order</td></tr>
+<tr><td>GET</td><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">/orders</span></td><td>My orders</td></tr>
+</table>
+<h3 style="color:#1a1a1a;margin-top:18px">Chat</h3>
+<table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse;width:100%;margin:12px 0">
+<tr><th>Method</th><th>Path</th><th>Description</th></tr>
+<tr><td>POST</td><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">/chats</span></td><td>Open chat (customer, by product_id)</td></tr>
+<tr><td>GET</td><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">/chats</span></td><td>List my chats</td></tr>
+<tr><td>GET</td><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">/chats/:id</span></td><td>Chat detail</td></tr>
+<tr><td>GET</td><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">/chats/:id/messages</span></td><td>Message history (paginated)</td></tr>
+<tr><td>POST</td><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">/chats/:id/messages</span></td><td>Send message (REST fallback)</td></tr>
+</table>
+<h3 style="color:#1a1a1a;margin-top:18px">Vendor (<span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">/vendor/*</span> — vendor role)</h3>
+<p style="margin:4px 0 4px 20px">• Products CRUD, Orders, Banners, Notices, Delivery boys, Dashboard</p>
+<h3 style="color:#1a1a1a;margin-top:18px">Admin (<span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">/admin/*</span> — admin role)</h3>
+<p style="margin:4px 0 4px 20px">• Full platform management</p>
+<h3 style="color:#1a1a1a;margin-top:18px">Uploads</h3>
+<table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse;width:100%;margin:12px 0">
+<tr><th>Method</th><th>Path</th><th>Who</th><th>Description</th></tr>
+<tr><td>POST</td><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">/uploads</span></td><td>admin, vendor</td><td>Image upload</td></tr>
+<tr><td>POST</td><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">/uploads/voice</span></td><td>customer, vendor</td><td>Voice message upload</td></tr>
+</table>
+<hr style="border:none;border-top:1px solid #ddd;margin:20px 0"/>
+<h2 style="color:#111;margin-top:24px;border-bottom:2px solid #e5e7eb;padding-bottom:6px">26. WebSocket (Real-time Chat)</h2>
+<h3 style="color:#1a1a1a;margin-top:18px">Connection</h3>
+<p style="font-family:Consolas,monospace;font-size:10pt;background:#f8f9fa;border:1px solid #e5e7eb;padding:10px;margin:10px 0;line-height:1.5">
+URL: http://localhost:4000<br/>
+Path: /socket.io<br/>
+Auth: handshake.auth.token = JWT<br/>
+</p>
+<h3 style="color:#1a1a1a;margin-top:18px">Events</h3>
+<table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse;width:100%;margin:12px 0">
+<tr><th>Event</th><th>Direction</th><th>Payload</th><th>Description</th></tr>
+<tr><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">chat:join</span></td><td>Client → Server</td><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">{ chatId }</span></td><td>Chat room join</td></tr>
+<tr><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">chat:leave</span></td><td>Client → Server</td><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">{ chatId }</span></td><td>Room leave</td></tr>
+<tr><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">chat:send</span></td><td>Client → Server</td><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">{ chatId, body? }</span> or <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">{ chatId, message_type: "voice", audio_url }</span></td><td>Message bhejo</td></tr>
+<tr><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">chat:new_message</span></td><td>Server → Client</td><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">{ chatId, message }</span></td><td>Naya message aaya</td></tr>
+</table>
+<h3 style="color:#1a1a1a;margin-top:18px">Server rooms</h3>
+<p style="margin:4px 0 4px 20px">• <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">user:{userId}</span> — personal notifications (future)</p>
+<p style="margin:4px 0 4px 20px">• <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">chat:{chatId}</span> — chat participants</p>
+<h3 style="color:#1a1a1a;margin-top:18px">Important</h3>
+<p style="margin:4px 0 4px 20px">• Backend ko <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">http.createServer</span> se start karna zaroori hai (WebSocket ke liye)</p>
+<p style="margin:4px 0 4px 20px">• Dev server restart karo migration/socket changes ke baad</p>
+<hr style="border:none;border-top:1px solid #ddd;margin:20px 0"/>
+<h2 style="color:#111;margin-top:24px;border-bottom:2px solid #e5e7eb;padding-bottom:6px">27. File Uploads</h2>
+<h3 style="color:#1a1a1a;margin-top:18px">Storage</h3>
+<p style="margin:4px 0 4px 20px">• Files disk par: <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">&lt;backend&gt;/uploads/</span></p>
+<p style="margin:4px 0 4px 20px">• Public URL: <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">http://localhost:4000/uploads/&lt;filename&gt;</span></p>
+<h3 style="color:#1a1a1a;margin-top:18px">Types</h3>
+<table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse;width:100%;margin:12px 0">
+<tr><th>Type</th><th>Max size</th><th>Formats</th><th>Filename pattern</th></tr>
+<tr><td>Image</td><td>5 MB</td><td>jpeg, png, webp, gif</td><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">{timestamp}-{random}.jpg</span></td></tr>
+<tr><td>Voice</td><td>5 MB</td><td>webm, mp4, m4a, wav, ogg</td><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">voice-{timestamp}-{random}.webm</span></td></tr>
+</table>
+<h3 style="color:#1a1a1a;margin-top:18px">Client usage</h3>
+<p style="margin:4px 0 4px 20px">• Upload → response me <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">{ path: "/uploads/..." }</span></p>
+<p style="margin:4px 0 4px 20px">• Display: <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">assetUrl(path)</span> — client apna API base prepend karta hai</p>
+<hr style="border:none;border-top:1px solid #ddd;margin:20px 0"/>
+<h2 style="color:#111;margin-top:24px;border-bottom:2px solid #e5e7eb;padding-bottom:6px">28. Security Rules</h2>
+<h3 style="color:#1a1a1a;margin-top:18px">Authentication</h3>
+<p style="margin:4px 0 4px 20px">• JWT on all protected routes</p>
+<p style="margin:4px 0 4px 20px">• Role-based access: <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">customer</span>, <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">vendor</span>, <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">delivery_boy</span>, <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">admin</span>, <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">super_admin</span></p>
+<h3 style="color:#1a1a1a;margin-top:18px">Chat security</h3>
+<p style="margin:4px 0 4px 20px">• <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">assertChatAccess()</span> — sirf customer ya us store ka vendor</p>
+<p style="margin:4px 0 4px 20px">• Socket join me bhi same check</p>
+<h3 style="color:#1a1a1a;margin-top:18px">Shop code</h3>
+<p style="margin:4px 0 4px 20px">• Invalid code → 404 error</p>
+<p style="margin:4px 0 4px 20px">• Code sirf active stores ke liye</p>
+<h3 style="color:#1a1a1a;margin-top:18px">OTP</h3>
+<p style="margin:4px 0 4px 20px">• bcrypt hashed storage</p>
+<p style="margin:4px 0 4px 20px">• TTL (default 5 min)</p>
+<p style="margin:4px 0 4px 20px">• Max attempts limit</p>
+<p style="margin:4px 0 4px 20px">• Dev mode: OTP console me (production me MSG91 SMS)</p>
+<h3 style="color:#1a1a1a;margin-top:18px">Voice upload</h3>
+<p style="margin:4px 0 4px 20px">• Sirf authenticated customer/vendor</p>
+<p style="margin:4px 0 4px 20px">• audio_url chat me sirf <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">/uploads/</span> path accept hota hai (path traversal protection)</p>
+<hr style="border:none;border-top:1px solid #ddd;margin:20px 0"/>
+<h2 style="color:#111;margin-top:24px;border-bottom:2px solid #e5e7eb;padding-bottom:6px">29. Development Setup</h2>
+<h3 style="color:#1a1a1a;margin-top:18px">Prerequisites</h3>
+<p style="margin:4px 0 4px 20px">• Node.js 18+</p>
+<p style="margin:4px 0 4px 20px">• PostgreSQL (ya Docker)</p>
+<p style="margin:4px 0 4px 20px">• For mobile: Xcode (iOS) / Android Studio</p>
+<h3 style="color:#1a1a1a;margin-top:18px">Backend</h3>
+<p style="font-family:Consolas,monospace;font-size:10pt;background:#f8f9fa;border:1px solid #e5e7eb;padding:10px;margin:10px 0;line-height:1.5">
+cd apps/backend<br/>
+cp .env.example .env<br/>
+npm install<br/>
+# Start PostgreSQL (docker-compose up -d)<br/>
+npm run migrate<br/>
+npm run seed<br/>
+npm run dev    # → http://localhost:4000<br/>
+</p>
+<h3 style="color:#1a1a1a;margin-top:18px">Customer Website</h3>
+<p style="font-family:Consolas,monospace;font-size:10pt;background:#f8f9fa;border:1px solid #e5e7eb;padding:10px;margin:10px 0;line-height:1.5">
+cd apps/web<br/>
+cp .env.example .env<br/>
+npm install<br/>
+npm run dev    # → http://localhost:5174<br/>
+</p>
+<h3 style="color:#1a1a1a;margin-top:18px">Admin Panel</h3>
+<p style="font-family:Consolas,monospace;font-size:10pt;background:#f8f9fa;border:1px solid #e5e7eb;padding:10px;margin:10px 0;line-height:1.5">
+cd apps/admin<br/>
+cp .env.example .env<br/>
+npm install<br/>
+npm run dev    # → http://localhost:5173<br/>
+</p>
+<h3 style="color:#1a1a1a;margin-top:18px">Mobile App</h3>
+<p style="font-family:Consolas,monospace;font-size:10pt;background:#f8f9fa;border:1px solid #e5e7eb;padding:10px;margin:10px 0;line-height:1.5">
+cd apps/mobile<br/>
+npm install<br/>
+cd ios &amp;&amp; pod install &amp;&amp; cd ..<br/>
+npx react-native run-ios<br/>
+# or<br/>
+npx react-native run-android<br/>
+</p>
+<h3 style="color:#1a1a1a;margin-top:18px">Environment variables (important)</h3>
+<table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse;width:100%;margin:12px 0">
+<tr><th>Variable</th><th>Purpose</th></tr>
+<tr><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">DATABASE_URL</span></td><td>PostgreSQL connection</td></tr>
+<tr><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">JWT_SECRET</span></td><td>Token signing</td></tr>
+<tr><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">OTP_DEV_MODE=true</span></td><td>OTP console me print</td></tr>
+<tr><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">PAYMENTS_DEV_BYPASS=true</span></td><td>Online payment skip (dev)</td></tr>
+<tr><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">CORS_ORIGINS</span></td><td>Allowed frontend origins</td></tr>
+</table>
+<hr style="border:none;border-top:1px solid #ddd;margin:20px 0"/>
+<h2 style="color:#111;margin-top:24px;border-bottom:2px solid #e5e7eb;padding-bottom:6px">30. Test Accounts (Seed Data)</h2>
+<table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse;width:100%;margin:12px 0">
+<tr><th>Role</th><th>Phone</th><th>Name</th><th>Notes</th></tr>
+<tr><td>Admin</td><td>9999900000</td><td>Zero Admin</td><td>Full admin access</td></tr>
+<tr><td>Vendor 1</td><td>9999922222</td><td>Ramu Kirana</td><td>Shop code: RAMU01</td></tr>
+<tr><td>Vendor 2</td><td>9999933333</td><td>Shyam General Store</td><td>Shop code: SHYAM01</td></tr>
+<tr><td>Delivery</td><td>9999911111</td><td>Ravi Delivery</td><td>Ramu Kirana ke under</td></tr>
+</table>
+<h3 style="color:#1a1a1a;margin-top:18px">OTP in dev</h3>
+<p style="margin:4px 0 4px 20px">• OTP backend console/log me print hota hai (<span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">OTP_DEV_MODE=true</span>)</p>
+<p style="margin:4px 0 4px 20px">• Koi real SMS nahi jata jab tak MSG91 keys na hon</p>
+<h3 style="color:#1a1a1a;margin-top:18px">Test flow suggestion</h3>
+<p style="margin:4px 0 4px 20px">1. Customer login (koi bhi naya phone) → shop code <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">RAMU01</span></p>
+<p style="margin:4px 0 4px 20px">2. Category browse → product → cart → COD order</p>
+<p style="margin:4px 0 4px 20px">3. Vendor login <span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">9999922222</span> → order accept → preparing → ready → assign delivery</p>
+<p style="margin:4px 0 4px 20px">4. Product par chat kholo → text + voice message bhejo</p>
+<p style="margin:4px 0 4px 20px">5. Vendor notices add karo → website ticker me dekho</p>
+<hr style="border:none;border-top:1px solid #ddd;margin:20px 0"/>
+<h2 style="color:#111;margin-top:24px;border-bottom:2px solid #e5e7eb;padding-bottom:6px">31. Completed vs Pending</h2>
+<h3 style="color:#1a1a1a;margin-top:18px">✅ Completed (ab tak)</h3>
+<table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse;width:100%;margin:12px 0">
+<tr><th>Feature</th><th>Status</th></tr>
+<tr><td>Multi-vendor marketplace</td><td>✅</td></tr>
+<tr><td>Customer website (full flow)</td><td>✅</td></tr>
+<tr><td>Mobile app (customer + vendor + delivery)</td><td>✅</td></tr>
+<tr><td>OTP login</td><td>✅</td></tr>
+<tr><td>3 languages (en/hi/mr)</td><td>✅</td></tr>
+<tr><td>Voice search</td><td>✅</td></tr>
+<tr><td>Category → Shops → Products flow</td><td>✅</td></tr>
+<tr><td>Preferred shops filter</td><td>✅</td></tr>
+<tr><td>Shop code binding</td><td>✅</td></tr>
+<tr><td>Single-shop cart + checkout</td><td>✅</td></tr>
+<tr><td>COD orders</td><td>✅</td></tr>
+<tr><td>Broadcast open requests</td><td>✅</td></tr>
+<tr><td>Vendor self-service (products, orders, banners)</td><td>✅</td></tr>
+<tr><td>Admin panel (stores, products, banners, commission)</td><td>✅</td></tr>
+<tr><td>Vendor web login (My Shop)</td><td>✅</td></tr>
+<tr><td>Delivery boys (vendor managed)</td><td>✅</td></tr>
+<tr><td>Order assignment to delivery</td><td>✅</td></tr>
+<tr><td>Extra charge per product</td><td>✅</td></tr>
+<tr><td>₹10 cancellation penalty</td><td>✅</td></tr>
+<tr><td>Commission dashboard</td><td>✅</td></tr>
+<tr><td>Nearby shops (GPS distance, no map API)</td><td>✅</td></tr>
+<tr><td>Vendor scrolling notices (website ticker)</td><td>✅</td></tr>
+<tr><td>Product chat (WebSocket, text)</td><td>✅</td></tr>
+<tr><td>Voice messages in chat</td><td>✅</td></tr>
+<tr><td>Website redesign (sidebar ticker, mobile sheet)</td><td>✅</td></tr>
+<tr><td>Marwadi product/category content</td><td>✅</td></tr>
+</table>
+<h3 style="color:#1a1a1a;margin-top:18px">⏳ Pending (launch ke liye)</h3>
+<table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse;width:100%;margin:12px 0">
+<tr><th>Feature</th><th>Notes</th></tr>
+<tr><td>Production SMS (MSG91)</td><td>Dev mode me OTP console par</td></tr>
+<tr><td>PayU production keys</td><td>Test/dev bypass abhi</td></tr>
+<tr><td>Push notifications (FCM)</td><td>Outbox worker hai, push nahi</td></tr>
+<tr><td>Mobile product photo (camera upload)</td><td>Abhi image URL; web upload hai</td></tr>
+<tr><td>Full Google Maps integration</td><td>Address autocomplete, dynamic delivery charge</td></tr>
+<tr><td>Firebase chat backup</td><td>WebSocket abhi; Firebase future option</td></tr>
+<tr><td>Hold-to-record UX</td><td>Abhi tap-start / tap-stop</td></tr>
+</table>
+<hr style="border:none;border-top:1px solid #ddd;margin:20px 0"/>
+<h2 style="color:#111;margin-top:24px;border-bottom:2px solid #e5e7eb;padding-bottom:6px">Appendix A — Order Status Reference</h2>
+<table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse;width:100%;margin:12px 0">
+<tr><th>Status</th><th>Hindi meaning</th><th>Who updates</th></tr>
+<tr><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">placed</span></td><td>Order aa gaya</td><td>System (customer place karta hai)</td></tr>
+<tr><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">confirmed</span></td><td>Dukaan ne accept kiya</td><td>Vendor</td></tr>
+<tr><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">preparing</span></td><td>Bana rahe hain</td><td>Vendor</td></tr>
+<tr><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">ready_for_pickup</span></td><td>Pickup ke liye ready</td><td>Vendor</td></tr>
+<tr><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">assigned</span></td><td>Delivery boy assign</td><td>Vendor</td></tr>
+<tr><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">out_for_delivery</span></td><td>Raaste me</td><td>Delivery boy</td></tr>
+<tr><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">delivered</span></td><td>Pahunch gaya</td><td>Delivery boy</td></tr>
+<tr><td><span style="font-family:Consolas,monospace;background:#f3f4f6;padding:1px 4px">cancelled</span></td><td>Cancel</td><td>Customer/Vendor/System</td></tr>
+</table>
+<hr style="border:none;border-top:1px solid #ddd;margin:20px 0"/>
+<h2 style="color:#111;margin-top:24px;border-bottom:2px solid #e5e7eb;padding-bottom:6px">Appendix B — Glossary</h2>
+<table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse;width:100%;margin:12px 0">
+<tr><th>Term</th><th>Meaning</th></tr>
+<tr><td>Shop code</td><td>Dukaan ka unique code (RAMU01) — customer bind karne ke liye</td></tr>
+<tr><td>Preferred stores</td><td>Customer ki chuni hui dukaanein — catalog filter</td></tr>
+<tr><td>Broadcast request</td><td>Ek saath sab shops ko "yeh chahiye" request</td></tr>
+<tr><td>Commission</td><td>Zero ka order par hissa (%)</td></tr>
+<tr><td>Notice</td><td>Vendor ki chhoti update — website ticker me</td></tr>
+<tr><td>Product chat</td><td>Ek product par customer-vendor chat</td></tr>
+<tr><td>Member login</td><td>Staff login (vendor/delivery) — mobile app</td></tr>
+</table>
+<hr style="border:none;border-top:1px solid #ddd;margin:20px 0"/>
+<p style="margin:8px 0;line-height:1.6"><em>End of document. Koi section update chahiye ho to bata dena — naye features ke saath version badha denge.</em></p></body></html>
