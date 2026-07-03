@@ -48,6 +48,7 @@ const categorySchema = z.object({
   image_url: imageRef.optional(),
   sort_order: z.number().int().optional(),
   is_active: z.boolean().optional(),
+  featured: z.boolean().optional(),
 });
 router.get('/categories', asyncHandler(async (_req, res) => ok(res, await svc.listCategories())));
 router.post('/categories', validate({ body: categorySchema }), asyncHandler(async (req, res) => ok(res, await svc.createCategory(req.body), 'common.ok', 201)));

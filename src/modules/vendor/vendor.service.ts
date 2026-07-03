@@ -111,6 +111,7 @@ export async function createProduct(userId: string, input: any) {
       stock: input.stock ?? 0,
       image_url: input.image_url ?? null,
       images: JSON.stringify(input.images ?? []),
+      attributes: JSON.stringify(input.attributes ?? {}),
       is_active: input.is_active ?? true,
       sort_order: input.sort_order ?? 0,
     })
@@ -139,6 +140,7 @@ export async function updateProduct(userId: string, id: string, input: any) {
   if (input.stock !== undefined) patch.stock = input.stock;
   if (input.image_url !== undefined) patch.image_url = input.image_url;
   if (input.images !== undefined) patch.images = JSON.stringify(input.images);
+  if (input.attributes !== undefined) patch.attributes = JSON.stringify(input.attributes);
   if (input.is_active !== undefined) patch.is_active = input.is_active;
   if (input.sort_order !== undefined) patch.sort_order = input.sort_order;
   const [row] = await db('products').where({ id }).update(patch).returning('*');

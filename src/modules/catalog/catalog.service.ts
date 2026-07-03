@@ -38,6 +38,7 @@ export function serializeProduct(row: any, lang: Lang) {
     stock: row.stock,
     image_url: row.image_url,
     images: row.images ?? [],
+    attributes: row.attributes ?? {},
   };
 }
 

@@ -40,6 +40,9 @@ export const env = {
     ttlSeconds: int('OTP_TTL_SECONDS', 300),
     maxAttempts: int('OTP_MAX_ATTEMPTS', 5),
     devMode: bool('OTP_DEV_MODE', true),
+    // Testing: when OTP_TEST_MODE=true, this fixed code works for any number.
+    testMode: bool('OTP_TEST_MODE', false),
+    testCode: process.env.OTP_TEST_CODE ?? '123456',
   },
 
   msg91: {

@@ -92,7 +92,9 @@ export async function setCategoryFeature(id: string, featured: boolean) {
   if (!row) throw ApiError.notFound();
   return row;
 }
-export async function createCategory(input: { name: Ml; image_url?: string; sort_order?: number; is_active?: boolean }) {
+export async function createCategory(input: { name: Ml; image_url?: string; sort_order?: number; is_active?: boolean; featured?: boolean }) {
+  // Admin categories default to featured on home (they are the global taxonomy).
+  const featured = input.featured ?? true;
   const [row] = await db('categories')
     .insert({
       name: JSON.stringify(input.name),
@@ -100,16 +102,22 @@ export async function createCategory(input: { name: Ml; image_url?: string; sort
       image_url: input.image_url ?? null,
       sort_order: input.sort_order ?? 0,
       is_active: input.is_active ?? true,
+      featured,
+      feature_status: featured ? 'approved' : 'none',
     })
     .returning('*');
   return row;
 }
-export async function updateCategory(id: string, input: Partial<{ name: Ml; image_url: string; sort_order: number; is_active: boolean }>) {
+export async function updateCategory(id: string, input: Partial<{ name: Ml; image_url: string; sort_order: number; is_active: boolean; featured: boolean }>) {
   const patch: Record<string, unknown> = {};
   if (input.name) patch.name = JSON.stringify(input.name);
   if (input.image_url !== undefined) patch.image_url = input.image_url;
   if (input.sort_order !== undefined) patch.sort_order = input.sort_order;
   if (input.is_active !== undefined) patch.is_active = input.is_active;
+  if (input.featured !== undefined) {
+    patch.featured = input.featured;
+    patch.feature_status = input.featured ? 'approved' : 'rejected';
+  }
   const [row] = await db('categories').where({ id }).update(patch).returning('*');
   if (!row) throw ApiError.notFound();
   return row;

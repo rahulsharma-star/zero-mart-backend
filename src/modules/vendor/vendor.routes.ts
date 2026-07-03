@@ -85,6 +85,7 @@ const productBody = z.object({
   stock: z.number().int().min(0).optional(),
   image_url: z.string().optional(),
   images: z.array(z.string()).optional(),
+  attributes: z.record(z.any()).optional(),
   is_active: z.boolean().optional(),
   sort_order: z.number().int().optional(),
 });

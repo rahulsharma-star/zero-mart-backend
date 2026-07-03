@@ -91,23 +91,29 @@ export async function verifyOtp(input: {
   language?: Lang;
   shop_code?: string;
 }): Promise<{ token: string; accessToken: string; refreshToken: string; user: PublicUser; isNewUser: boolean }> {
-  const record = await db('otp_codes')
-    .where({ phone: input.phone })
-    .whereNull('verified_at')
-    .orderBy('created_at', 'desc')
-    .first();
+  // Testing shortcut: in dev/test mode (OTP_DEV_MODE or OTP_TEST_MODE) the fixed
+  // test code (default 123456) verifies any number without a real stored OTP.
+  const testBypass = (env.otp.devMode || env.otp.testMode) && input.code.trim() === env.otp.testCode;
 
-  if (!record) throw new ApiError(400, 'auth.otp_invalid');
-  if (new Date(record.expires_at).getTime() < Date.now()) throw new ApiError(400, 'auth.otp_invalid');
-  if (record.attempts >= env.otp.maxAttempts) throw new ApiError(429, 'auth.otp_too_many');
+  if (!testBypass) {
+    const record = await db('otp_codes')
+      .where({ phone: input.phone })
+      .whereNull('verified_at')
+      .orderBy('created_at', 'desc')
+      .first();
 
-  const matches = await bcrypt.compare(input.code, record.code_hash);
-  if (!matches) {
-    await db('otp_codes').where({ id: record.id }).increment('attempts', 1);
-    throw new ApiError(400, 'auth.otp_invalid');
+    if (!record) throw new ApiError(400, 'auth.otp_invalid');
+    if (new Date(record.expires_at).getTime() < Date.now()) throw new ApiError(400, 'auth.otp_invalid');
+    if (record.attempts >= env.otp.maxAttempts) throw new ApiError(429, 'auth.otp_too_many');
+
+    const matches = await bcrypt.compare(input.code, record.code_hash);
+    if (!matches) {
+      await db('otp_codes').where({ id: record.id }).increment('attempts', 1);
+      throw new ApiError(400, 'auth.otp_invalid');
+    }
+
+    await db('otp_codes').where({ id: record.id }).update({ verified_at: db.fn.now() });
   }
-
-  await db('otp_codes').where({ id: record.id }).update({ verified_at: db.fn.now() });
 
   // upsert user
   let user = await db('users').where({ phone: input.phone }).first();
