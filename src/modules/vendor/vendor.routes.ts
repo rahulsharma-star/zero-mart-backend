@@ -46,6 +46,11 @@ router.post(
 );
 
 router.get('/me', asyncHandler(async (req, res) => ok(res, await svc.me(req.user!.sub))));
+router.put(
+  '/shop',
+  validate({ body: z.object({ name: z.string().trim().min(2).max(120).optional(), logo_url: z.string().max(500).nullable().optional() }) }),
+  asyncHandler(async (req, res) => ok(res, await svc.updateShop(req.user!.sub, req.body), 'common.ok'))
+);
 router.get('/orders', asyncHandler(async (req, res) => ok(res, await svc.listOrders(req.user!.sub, req.query.status as string))));
 router.get('/orders/:id', asyncHandler(async (req, res) => ok(res, await svc.getOrder(req.user!.sub, req.params.id))));
 router.post('/orders/:id/accept', asyncHandler(async (req, res) => ok(res, await svc.acceptOrder(req.user!.sub, req.params.id))));

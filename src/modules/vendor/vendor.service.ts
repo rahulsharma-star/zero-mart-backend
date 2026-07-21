@@ -16,6 +16,17 @@ export async function getVendorStore(userId: string) {
   return store;
 }
 
+/** Vendor updates their shop branding (name + logo). */
+export async function updateShop(userId: string, input: { name?: string; logo_url?: string | null }) {
+  const store = await getVendorStore(userId);
+  const patch: Record<string, unknown> = {};
+  if (input.name !== undefined && input.name.trim()) patch.name = input.name.trim();
+  if (input.logo_url !== undefined) patch.logo_url = input.logo_url || null;
+  if (Object.keys(patch).length) await db('stores').where({ id: store.id }).update(patch);
+  const updated = await db('stores').where({ id: store.id }).first();
+  return { id: updated.id, name: updated.name, logo_url: updated.logo_url ?? null, shop_code: updated.shop_code };
+}
+
 // ── Vendor products ──────────────────────────────────────
 function slugify(s: string): string {
   return (
@@ -274,7 +285,7 @@ export async function me(userId: string) {
   )[0];
 
   return {
-    store: { id: store.id, name: store.name, phone: store.phone, shop_code: store.shop_code, commission_rate: store.commission_rate },
+    store: { id: store.id, name: store.name, logo_url: store.logo_url ?? null, phone: store.phone, shop_code: store.shop_code, commission_rate: store.commission_rate },
     user: { id: user.id, name: user.name, phone: user.phone },
     stats: {
       pending_orders: Number(pending.count),

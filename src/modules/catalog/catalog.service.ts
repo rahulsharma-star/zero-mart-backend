@@ -135,6 +135,7 @@ export function serializeStore(row: any) {
   return {
     id: row.id,
     name: row.name,
+    logo_url: row.logo_url ?? null,
     shop_code: row.shop_code ?? null,
     address: row.address ?? null,
     phone: row.phone ?? null,
